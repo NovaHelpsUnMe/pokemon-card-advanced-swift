@@ -81,6 +81,7 @@ final class GameViewModel: ObservableObject {
 
     private let playerDeckSeed: [Pokemon]
     private let opponentDeckSeed: [Pokemon]
+    private let placeholderPrizeCount = 6
 
     init(playerDeck: [Pokemon]? = nil, opponentDeck: [Pokemon]? = nil) {
         let resolvedPlayerDeck = playerDeck ?? samplePlayerDeck
@@ -123,6 +124,67 @@ final class GameViewModel: ObservableObject {
         "\(playerBoard.active?.attackName ?? "Attack")"
     }
 
+    var isAttackButtonEnabled: Bool {
+        isPlayerTurn && playerBoard.active != nil
+    }
+
+    var isRestartButtonVisible: Bool {
+        true
+    }
+
+    var isRestartButtonEnabled: Bool {
+        true
+    }
+
+    var playerHandButtonTitle: String {
+        "Hand (\(playerBoard.handCount))"
+    }
+
+    var playerHandSheetTitle: String {
+        gamePhase == .setup ? "Choose Your Pokemon" : "Your Hand"
+    }
+
+    var playerHandSheetSubtitle: String {
+        switch gamePhase {
+        case .setup:
+            if playerBoard.active == nil {
+                return "Choose an active Pokemon from your opening hand."
+            }
+
+            return "Add bench Pokemon or start the battle."
+        case .battle:
+            if isGameOver {
+                return "The battle is over."
+            }
+
+            return isPlayerTurn ? "Play a card to your bench if needed." : "Wait for the opponent's turn to finish."
+        }
+    }
+
+    var playerVisibleDeckCount: Int {
+        playerBoard.deckCount
+    }
+
+    var playerVisibleDiscardCount: Int {
+        playerBoard.discardCount
+    }
+
+    var playerPrizesRemaining: Int {
+        placeholderPrizeCount
+    }
+
+    var opponentVisibleDeckCount: Int {
+        opponentBoard.deckCount
+    }
+
+    var opponentVisibleDiscardCount: Int {
+        opponentBoard.discardCount
+    }
+
+    var opponentPrizesRemaining: Int {
+        placeholderPrizeCount
+    }
+
     var canStartBattle: Bool {
         gamePhase == .setup && playerBoard.active != nil && opponentBoard.active != nil
     }
@@ -140,6 +202,31 @@ final class GameViewModel: ObservableObject {
         playerBoard.bench.count < playerBoard.maxBenchSize &&
         playerBoard.hand.contains(card) &&
         (gamePhase == .setup || isPlayerTurn)
+    }
+
+    func handCardActionSummary(for card: BattlePokemon) -> String {
+        if canAssignPlayerActive(card) {
+            return "Make Active"
+        }
+
+        if canBenchPlayerCard(card) {
+            return "Move to Bench"
+        }
+
+        if isGameOver {
+            return "Unavailable"
+        }
+
+        switch gamePhase {
+        case .setup:
+            if playerBoard.active != nil && playerBoard.bench.count >= playerBoard.maxBenchSize {
+                return "Bench Full"
+            }
+
+            return "Waiting"
+        case .battle:
+            return isPlayerTurn ? "No Action" : "Opponent Turn"
+        }
     }
 
     func placePlayerActive(cardID: UUID) {
