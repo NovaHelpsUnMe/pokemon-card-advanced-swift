@@ -7,7 +7,7 @@ enum BattleTurn {
     case opponent
 }
 
-// GameViewModel controls the battle rules, changing game state, and Live Activity updates.
+// GameViewModel controls the battle rules and published game state.
 @MainActor
 final class GameViewModel: ObservableObject {
     @Published var player: BattlePokemon
@@ -19,18 +19,12 @@ final class GameViewModel: ObservableObject {
 
     private let startingPlayer: Pokemon
     private let startingOpponent: Pokemon
-    private let liveActivityManager = BattleLiveActivityManager()
-
     init(playerPokemon: Pokemon = playerStarter, opponentPokemon: Pokemon = opponentStarter) {
         startingPlayer = playerPokemon
         startingOpponent = opponentPokemon
         player = BattlePokemon(pokemon: playerPokemon)
         opponent = BattlePokemon(pokemon: opponentPokemon)
         battleMessage = "\(playerPokemon.name) is ready to battle \(opponentPokemon.name)!"
-
-        Task {
-            await startLiveActivity()
-        }
     }
 
     var isPlayerTurn: Bool {
@@ -62,24 +56,13 @@ final class GameViewModel: ObservableObject {
         if opponent.currentHP == 0 {
             finishGame(
                 title: "You Win!",
-                message: "\(player.name) knocked out \(opponent.name)!",
-                battleStatus: "win",
-                lastMoveName: player.attackName,
-                lastDamage: player.damage
+                message: "\(player.name) knocked out \(opponent.name)!"
             )
             return
         }
 
         currentTurn = .opponent
         battleMessage = "\(player.name) used \(player.attackName) for \(player.damage) damage."
-
-        Task {
-            await updateLiveActivity(
-                lastMoveName: player.attackName,
-                lastDamage: player.damage,
-                battleStatus: "active"
-            )
-        }
 
         scheduleOpponentTurn()
     }
@@ -91,10 +74,6 @@ final class GameViewModel: ObservableObject {
         battleMessage = "\(player.name) is ready to battle \(opponent.name)!"
         resultTitle = nil
         resultMessage = nil
-
-        Task {
-            await startLiveActivity()
-        }
     }
 
     private func scheduleOpponentTurn() {
@@ -111,75 +90,22 @@ final class GameViewModel: ObservableObject {
         if player.currentHP == 0 {
             finishGame(
                 title: "You Lose",
-                message: "\(opponent.name) knocked out \(player.name).",
-                battleStatus: "lose",
-                lastMoveName: opponent.attackName,
-                lastDamage: opponent.damage
+                message: "\(opponent.name) knocked out \(player.name)."
             )
             return
         }
 
         currentTurn = .player
         battleMessage = "\(opponent.name) used \(opponent.attackName) for \(opponent.damage) damage."
-
-        Task {
-            await updateLiveActivity(
-                lastMoveName: opponent.attackName,
-                lastDamage: opponent.damage,
-                battleStatus: "active"
-            )
-        }
     }
 
     private func updatedHP(afterAttacking attacker: BattlePokemon, defender: BattlePokemon) -> Int {
         max(defender.currentHP - attacker.damage, 0)
     }
 
-    private func finishGame(
-        title: String,
-        message: String,
-        battleStatus: String,
-        lastMoveName: String,
-        lastDamage: Int
-    ) {
+    private func finishGame(title: String, message: String) {
         resultTitle = title
         resultMessage = message
         battleMessage = message
-
-        Task {
-            await liveActivityManager.endBattle(
-                playerHP: player.currentHP,
-                opponentHP: opponent.currentHP,
-                lastMoveName: lastMoveName,
-                lastDamage: lastDamage,
-                currentTurnLabel: turnLabel,
-                battleStatus: battleStatus
-            )
-        }
-    }
-
-    private func startLiveActivity() async {
-        await liveActivityManager.startBattle(
-            playerName: player.name,
-            opponentName: opponent.name,
-            playerHP: player.currentHP,
-            opponentHP: opponent.currentHP,
-            currentTurnLabel: turnLabel
-        )
-    }
-
-    private func updateLiveActivity(
-        lastMoveName: String,
-        lastDamage: Int,
-        battleStatus: String
-    ) async {
-        await liveActivityManager.updateBattle(
-            playerHP: player.currentHP,
-            opponentHP: opponent.currentHP,
-            lastMoveName: lastMoveName,
-            lastDamage: lastDamage,
-            currentTurnLabel: turnLabel,
-            battleStatus: battleStatus
-        )
     }
 }

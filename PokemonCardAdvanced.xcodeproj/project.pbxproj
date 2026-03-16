@@ -6,37 +6,8 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		F1A000000000000000000001 /* PokemonCardAdvancedLiveActivity.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = F1A000000000000000000003 /* PokemonCardAdvancedLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-/* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		F1A000000000000000000009 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E13CAA0E2F606FEA004DD66F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = F1A000000000000000000006;
-			remoteInfo = PokemonCardAdvancedLiveActivity;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		F1A000000000000000000002 /* Embed App Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				F1A000000000000000000001 /* PokemonCardAdvancedLiveActivity.appex in Embed App Extensions */,
-			);
-			name = "Embed App Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
 		E13CAA162F606FEA004DD66F /* PokemonCardAdvanced.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PokemonCardAdvanced.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F1A000000000000000000003 /* PokemonCardAdvancedLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PokemonCardAdvancedLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -45,22 +16,10 @@
 			path = PokemonCardAdvanced;
 			sourceTree = "<group>";
 		};
-		F1A000000000000000000004 /* PokemonCardAdvancedLiveActivity */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PokemonCardAdvancedLiveActivity;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		E13CAA132F606FEA004DD66F /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		F1A000000000000000000005 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -74,7 +33,6 @@
 			isa = PBXGroup;
 			children = (
 				E13CAA182F606FEA004DD66F /* PokemonCardAdvanced */,
-				F1A000000000000000000004 /* PokemonCardAdvancedLiveActivity */,
 				E13CAA172F606FEA004DD66F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -83,7 +41,6 @@
 			isa = PBXGroup;
 			children = (
 				E13CAA162F606FEA004DD66F /* PokemonCardAdvanced.app */,
-				F1A000000000000000000003 /* PokemonCardAdvancedLiveActivity.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -98,12 +55,10 @@
 				E13CAA122F606FEA004DD66F /* Sources */,
 				E13CAA132F606FEA004DD66F /* Frameworks */,
 				E13CAA142F606FEA004DD66F /* Resources */,
-				F1A000000000000000000002 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				F1A00000000000000000000A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E13CAA182F606FEA004DD66F /* PokemonCardAdvanced */,
@@ -114,28 +69,6 @@
 			productName = PokemonCardAdvanced;
 			productReference = E13CAA162F606FEA004DD66F /* PokemonCardAdvanced.app */;
 			productType = "com.apple.product-type.application";
-		};
-		F1A000000000000000000006 /* PokemonCardAdvancedLiveActivity */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = F1A00000000000000000000D /* Build configuration list for PBXNativeTarget "PokemonCardAdvancedLiveActivity" */;
-			buildPhases = (
-				F1A000000000000000000008 /* Sources */,
-				F1A000000000000000000005 /* Frameworks */,
-				F1A000000000000000000007 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				F1A000000000000000000004 /* PokemonCardAdvancedLiveActivity */,
-			);
-			name = PokemonCardAdvancedLiveActivity;
-			packageProductDependencies = (
-			);
-			productName = PokemonCardAdvancedLiveActivity;
-			productReference = F1A000000000000000000003 /* PokemonCardAdvancedLiveActivity.appex */;
-			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -148,9 +81,6 @@
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					E13CAA152F606FEA004DD66F = {
-						CreatedOnToolsVersion = 26.0.1;
-					};
-					F1A000000000000000000006 = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
 				};
@@ -170,20 +100,12 @@
 			projectRoot = "";
 			targets = (
 				E13CAA152F606FEA004DD66F /* PokemonCardAdvanced */,
-				F1A000000000000000000006 /* PokemonCardAdvancedLiveActivity */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		E13CAA142F606FEA004DD66F /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		F1A000000000000000000007 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -200,22 +122,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		F1A000000000000000000008 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		F1A00000000000000000000A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = F1A000000000000000000006 /* PokemonCardAdvancedLiveActivity */;
-			targetProxy = F1A000000000000000000009 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		E13CAA1F2F606FEC004DD66F /* Debug */ = {
@@ -347,8 +254,6 @@
 				DEVELOPMENT_TEAM = 5XQL65RK7Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
-				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -381,8 +286,6 @@
 				DEVELOPMENT_TEAM = 5XQL65RK7Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
-				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -395,64 +298,6 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = name.Chadhindsight.PokemonCardAdvanced;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		F1A00000000000000000000B /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5XQL65RK7Z;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = PokemonCardAdvancedLiveActivity/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = name.Chadhindsight.PokemonCardAdvancedLiveActivity;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		F1A00000000000000000000C /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5XQL65RK7Z;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = PokemonCardAdvancedLiveActivity/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = name.Chadhindsight.PokemonCardAdvancedLiveActivity;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -480,15 +325,6 @@
 			buildConfigurations = (
 				E13CAA222F606FEC004DD66F /* Debug */,
 				E13CAA232F606FEC004DD66F /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		F1A00000000000000000000D /* Build configuration list for PBXNativeTarget "PokemonCardAdvancedLiveActivity" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F1A00000000000000000000B /* Debug */,
-				F1A00000000000000000000C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
