@@ -1,7 +1,7 @@
 import Foundation
 
-// Starter Pokemon roster for the advanced battle project.
-// Nova stays in the game, but the stats are balanced for a simple classroom battle.
+// Starter roster for the advanced battle project.
+// Nova stays in the game, while Raichu now works as the demo evolution payoff.
 let samplePokemon: [Pokemon] = [
     Pokemon(
         imageName: "Pikachu",
@@ -46,12 +46,14 @@ let samplePokemon: [Pokemon] = [
     Pokemon(
         imageName: "Raichu",
         name: "Raichu",
-        maxHP: 145,
+        maxHP: 155,
         attackName: "Thunderbolt",
-        damage: 28,
-        attackDescription: "A heavy electric attack that can finish battles quickly.",
+        damage: 34,
+        attackDescription: "A heavy electric attack that rewards evolving Pikachu.",
         type: "Electric",
-        pokemonDescription: "A stronger electric Pokemon with solid overall stats."
+        pokemonDescription: "A stronger electric Pokemon that takes over once Pikachu is ready to evolve.",
+        stage: .stage1,
+        evolvesFrom: "Pikachu"
     ),
     Pokemon(
         imageName: "Pidgey",
@@ -75,6 +77,30 @@ let samplePokemon: [Pokemon] = [
     )
 ]
 
+let sampleTrainerCards: [TrainerCard] = [
+    TrainerCard(
+        name: "Professor's Notes",
+        systemImageName: "book.closed.fill",
+        effect: .draw(cards: 2),
+        effectDescription: "Draw 2 cards.",
+        trainerDescription: "A lightweight draw card that helps the demo hand stay active without adding complex rules."
+    ),
+    TrainerCard(
+        name: "Potion",
+        systemImageName: "cross.case.fill",
+        effect: .heal(amount: 30),
+        effectDescription: "Heal 30 damage from your Active Pokemon.",
+        trainerDescription: "A simple recovery effect that gives the player one clean defensive option."
+    ),
+    TrainerCard(
+        name: "Energy Drink",
+        systemImageName: "bolt.fill",
+        effect: .attachEnergy(amount: 1),
+        effectDescription: "Attach 1 extra energy to your Active Pokemon.",
+        trainerDescription: "Adds one more attached energy so evolution state changes are visible in the demo."
+    )
+]
+
 let playerStarter = samplePokemon.first { $0.name == "Pikachu" }!
 let opponentStarter = samplePokemon.first { $0.name == "Nova" }!
 
@@ -82,20 +108,27 @@ func pokemon(named name: String) -> Pokemon {
     samplePokemon.first { $0.name == name }!
 }
 
-let samplePlayerDeck: [Pokemon] = [
-    pokemon(named: "Pikachu"),
-    pokemon(named: "Bulbasaur"),
-    pokemon(named: "Charmander"),
-    pokemon(named: "Abra"),
-    pokemon(named: "Pidgey"),
-    pokemon(named: "Raichu")
+func trainer(named name: String) -> TrainerCard {
+    sampleTrainerCards.first { $0.name == name }!
+}
+
+let samplePlayerDeck: [CardDefinition] = [
+    .pokemon(pokemon(named: "Pikachu")),
+    .pokemon(pokemon(named: "Bulbasaur")),
+    .trainer(trainer(named: "Professor's Notes")),
+    .pokemon(pokemon(named: "Raichu")),
+    .trainer(trainer(named: "Potion")),
+    .pokemon(pokemon(named: "Charmander")),
+    .trainer(trainer(named: "Energy Drink")),
+    .pokemon(pokemon(named: "Abra")),
+    .pokemon(pokemon(named: "Pidgey"))
 ]
 
-let sampleOpponentDeck: [Pokemon] = [
-    pokemon(named: "Nova"),
-    pokemon(named: "Raichu"),
-    pokemon(named: "Pidgey"),
-    pokemon(named: "Charmander"),
-    pokemon(named: "Bulbasaur"),
-    pokemon(named: "Abra")
+let sampleOpponentDeck: [CardDefinition] = [
+    .pokemon(pokemon(named: "Nova")),
+    .pokemon(pokemon(named: "Charmander")),
+    .pokemon(pokemon(named: "Bulbasaur")),
+    .pokemon(pokemon(named: "Abra")),
+    .pokemon(pokemon(named: "Pidgey")),
+    .pokemon(pokemon(named: "Pikachu"))
 ]

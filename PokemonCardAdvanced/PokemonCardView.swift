@@ -209,6 +209,11 @@ struct PokemonCardView: View {
                     .fontWeight(.bold)
                     .lineLimit(displayStyle == .board ? 1 : 2)
 
+                Text("\(battlePokemon.stage.rawValue) • Energy \(battlePokemon.attachedEnergy)")
+                    .font(bodyFont)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
                 ProgressView(value: Double(battlePokemon.currentHP), total: Double(battlePokemon.maxHP))
                     .tint(.red)
 
@@ -271,6 +276,11 @@ struct PokemonCardView: View {
                     .fontWeight(.bold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
+
+                Text("E\(battlePokemon.attachedEnergy)")
+                    .font(bodyFont)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
 
                 ProgressView(value: Double(battlePokemon.currentHP), total: Double(battlePokemon.maxHP))
                     .tint(.red)

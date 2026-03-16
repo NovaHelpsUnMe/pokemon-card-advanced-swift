@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = GameViewModel()
     @State private var isHandSheetPresented = false
-    @State private var selectedCard: BattlePokemon?
+    @State private var selectedCard: CardDetailItem?
 
     var body: some View {
         GeometryReader { geometry in
@@ -67,13 +67,19 @@ struct ContentView: View {
                 },
                 onMoveToBench: { card in
                     viewModel.placePlayerBench(cardID: card.id)
+                },
+                onEvolve: { card, target in
+                    viewModel.evolvePlayerPokemon(cardID: card.id, targetID: target.id)
+                },
+                onPlayTrainer: { card in
+                    viewModel.playTrainer(cardID: card.id)
                 }
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedCard) { card in
-            CardDetailSheetView(battlePokemon: card) {
+            CardDetailSheetView(item: card) {
                 selectedCard = nil
             }
         }
@@ -208,7 +214,7 @@ struct ContentView: View {
         Group {
             if let card {
                 Button {
-                    selectedCard = card
+                    selectedCard = .boardPokemon(card)
                 } label: {
                     PokemonCardView(title: title, battlePokemon: card, displayStyle: .board)
                 }
@@ -224,16 +230,16 @@ struct ContentView: View {
             cards: cards,
             maxSlots: maxSlots,
             onSelectCard: { card in
-                selectedCard = card
+                selectedCard = .boardPokemon(card)
             }
         )
     }
 
-    private func inspectHandCard(_ card: BattlePokemon) {
+    private func inspectHandCard(_ card: BattleCard) {
         isHandSheetPresented = false
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            selectedCard = card
+            selectedCard = .handCard(card)
         }
     }
 }
