@@ -9,7 +9,25 @@ enum BattleTurn {
 
 enum GamePhase {
     case setup
-    case battle
+    case draw
+    case action
+    case attack
+    case gameOver
+
+    var label: String {
+        switch self {
+        case .setup:
+            return "Setup Phase"
+        case .draw:
+            return "Draw Phase"
+        case .action:
+            return "Action Phase"
+        case .attack:
+            return "Attack Phase"
+        case .gameOver:
+            return "Game Over"
+        }
+    }
 }
 
 struct PlayerBoard {
@@ -82,6 +100,7 @@ final class GameViewModel: ObservableObject {
     private let playerDeckSeed: [Pokemon]
     private let opponentDeckSeed: [Pokemon]
     private let placeholderPrizeCount = 6
+    private var hasCompletedOpeningPlayerTurn = false
 
     init(playerDeck: [Pokemon]? = nil, opponentDeck: [Pokemon]? = nil) {
         let resolvedPlayerDeck = playerDeck ?? samplePlayerDeck
@@ -95,20 +114,19 @@ final class GameViewModel: ObservableObject {
     }
 
     var phaseLabel: String {
-        switch gamePhase {
-        case .setup:
-            return "Setup Phase"
-        case .battle:
-            return isGameOver ? "Game Over" : turnLabel
-        }
+        gamePhase.label
     }
 
     var isPlayerTurn: Bool {
-        currentTurn == .player && gamePhase == .battle && !isGameOver
+        currentTurn == .player && isBattleInProgress
+    }
+
+    var isPlayerActionPhase: Bool {
+        currentTurn == .player && gamePhase == .action && !isGameOver
     }
 
     var isGameOver: Bool {
-        resultTitle != nil
+        gamePhase == .gameOver
     }
 
     var turnLabel: String {
@@ -120,12 +138,30 @@ final class GameViewModel: ObservableObject {
         }
     }
 
-    var attackButtonTitle: String {
+    var primaryActionButtonTitle: String {
+        if canEndPlayerTurn {
+            return "End Turn"
+        }
+
         "\(playerBoard.active?.attackName ?? "Attack")"
     }
 
-    var isAttackButtonEnabled: Bool {
-        isPlayerTurn && playerBoard.active != nil
+    var isPrimaryActionEnabled: Bool {
+        canEndPlayerTurn || canPlayerAttack
+    }
+
+    var shouldShowTurnLabel: Bool {
+        isBattleInProgress
+    }
+
+    var canPlayerAttack: Bool {
+        isPlayerActionPhase &&
+        playerBoard.active != nil &&
+        !isOpeningPlayerTurnAttackBlocked
+    }
+
+    var canEndPlayerTurn: Bool {
+        isPlayerActionPhase && isOpeningPlayerTurnAttackBlocked
     }
 
     var isRestartButtonVisible: Bool {
@@ -152,12 +188,20 @@ final class GameViewModel: ObservableObject {
             }
 
             return "Add bench Pokemon or start the battle."
-        case .battle:
-            if isGameOver {
-                return "The battle is over."
+        case .draw:
+            return isPlayerTurn ? "Drawing your turn card." : "Opponent is drawing a card."
+        case .action:
+            if isPlayerActionPhase {
+                return canEndPlayerTurn
+                    ? "Play a card to your bench if needed, then end the turn."
+                    : "Play a card to your bench or attack when ready."
             }
 
-            return isPlayerTurn ? "Play a card to your bench if needed." : "Wait for the opponent's turn to finish."
+            return "Wait for the opponent's turn to finish."
+        case .attack:
+            return isPlayerTurn ? "Resolving your attack." : "Opponent attack in progress."
+        case .gameOver:
+            return "The battle is over."
         }
     }
 
@@ -201,7 +245,7 @@ final class GameViewModel: ObservableObject {
         !isGameOver &&
         playerBoard.bench.count < playerBoard.maxBenchSize &&
         playerBoard.hand.contains(card) &&
-        (gamePhase == .setup || isPlayerTurn)
+        (gamePhase == .setup || isPlayerActionPhase)
     }
 
     func handCardActionSummary(for card: BattlePokemon) -> String {
@@ -224,8 +268,14 @@ final class GameViewModel: ObservableObject {
             }
 
             return "Waiting"
-        case .battle:
-            return isPlayerTurn ? "No Action" : "Opponent Turn"
+        case .draw:
+            return "Drawing"
+        case .action:
+            return isPlayerActionPhase ? "No Action" : "Opponent Turn"
+        case .attack:
+            return "Resolving"
+        case .gameOver:
+            return "Unavailable"
         }
     }
 
@@ -247,20 +297,29 @@ final class GameViewModel: ObservableObject {
     func startBattle() {
         guard canStartBattle else { return }
 
-        gamePhase = .battle
-        currentTurn = .player
-        battleMessage = "Setup complete. \(playerBoard.active?.name ?? "Your active Pokemon") goes first."
+        hasCompletedOpeningPlayerTurn = false
+        beginTurn(for: .player, after: "Setup complete. \(playerBoard.active?.name ?? "Your active Pokemon") goes first.")
+    }
+
+    func performPrimaryAction() {
+        if canEndPlayerTurn {
+            endPlayerTurn()
+            return
+        }
+
+        playerAttack()
     }
 
     func playerAttack() {
         guard
-            isPlayerTurn,
+            canPlayerAttack,
             let attacker = playerBoard.active,
             var defender = opponentBoard.active
         else {
             return
         }
 
+        gamePhase = .attack
         defender.currentHP = updatedHP(afterAttacking: attacker, defender: defender)
         opponentBoard.replaceActive(defender)
 
@@ -269,7 +328,7 @@ final class GameViewModel: ObservableObject {
             return
         }
 
-        startOpponentTurn(after: "\(attacker.name) used \(attacker.attackName) for \(attacker.damage) damage.")
+        beginTurn(for: .opponent, after: "\(attacker.name) used \(attacker.attackName) for \(attacker.damage) damage.")
     }
 
     func restartGame() {
@@ -277,6 +336,7 @@ final class GameViewModel: ObservableObject {
         opponentBoard = PlayerBoard(title: "Opponent", deck: opponentDeckSeed.map { BattlePokemon(pokemon: $0) })
         gamePhase = .setup
         currentTurn = .player
+        hasCompletedOpeningPlayerTurn = false
         playerBoard.drawCards(5)
         opponentBoard.drawCards(5)
         autoSetupOpponentBoard()
@@ -285,16 +345,37 @@ final class GameViewModel: ObservableObject {
         resultMessage = nil
     }
 
-    private func scheduleOpponentTurn() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in
-            self?.opponentAttack()
+    private var isBattleInProgress: Bool {
+        switch gamePhase {
+        case .draw, .action, .attack:
+            return true
+        case .setup, .gameOver:
+            return false
         }
+    }
+
+    private var isOpeningPlayerTurnAttackBlocked: Bool {
+        currentTurn == .player && !hasCompletedOpeningPlayerTurn
+    }
+
+    private func scheduleOpponentAction() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in
+            self?.opponentTakeAction()
+        }
+    }
+
+    private func opponentTakeAction() {
+        guard !isGameOver, currentTurn == .opponent, gamePhase == .action else { return }
+
+        gamePhase = .attack
+        opponentAttack()
     }
 
     private func opponentAttack() {
         guard
             !isGameOver,
-            gamePhase == .battle,
+            currentTurn == .opponent,
+            gamePhase == .attack,
             let attacker = opponentBoard.active,
             var defender = playerBoard.active
         else {
@@ -310,7 +391,7 @@ final class GameViewModel: ObservableObject {
         }
 
         refillOpponentBenchIfPossible()
-        startPlayerTurn(after: "\(attacker.name) used \(attacker.attackName) for \(attacker.damage) damage.")
+        beginTurn(for: .player, after: "\(attacker.name) used \(attacker.attackName) for \(attacker.damage) damage.")
     }
 
     private func updatedHP(afterAttacking attacker: BattlePokemon, defender: BattlePokemon) -> Int {
@@ -333,28 +414,50 @@ final class GameViewModel: ObservableObject {
         }
     }
 
-    private func startOpponentTurn(after message: String) {
-        currentTurn = .opponent
-        let drawnCards = opponentBoard.drawCards(1)
-        refillOpponentBenchIfPossible()
+    private func beginTurn(for turn: BattleTurn, after message: String) {
+        currentTurn = turn
+        gamePhase = .draw
 
-        if let drawn = drawnCards.first {
-            battleMessage = "\(message) Opponent drew \(drawn.name)."
-        } else {
-            battleMessage = message
+        let drawMessage: String?
+
+        switch turn {
+        case .player:
+            drawMessage = playerBoard.drawCards(1).first.map { "You drew \($0.name)." }
+        case .opponent:
+            drawMessage = opponentBoard.drawCards(1).first.map { "Opponent drew \($0.name)." }
+            refillOpponentBenchIfPossible()
         }
 
-        scheduleOpponentTurn()
+        enterActionPhase(for: turn, after: appendedMessage(message, with: drawMessage))
     }
 
-    private func startPlayerTurn(after message: String) {
-        currentTurn = .player
-        let drawnCards = playerBoard.drawCards(1)
-        if let drawn = drawnCards.first {
-            battleMessage = "\(message) You drew \(drawn.name)."
-        } else {
-            battleMessage = message
+    private func enterActionPhase(for turn: BattleTurn, after message: String) {
+        currentTurn = turn
+        gamePhase = .action
+
+        if turn == .player && isOpeningPlayerTurnAttackBlocked {
+            battleMessage = appendedMessage(message, with: "You can't attack on your first turn.")
+            return
         }
+
+        battleMessage = message
+
+        if turn == .opponent {
+            scheduleOpponentAction()
+        }
+    }
+
+    private func endPlayerTurn() {
+        guard canEndPlayerTurn else { return }
+
+        hasCompletedOpeningPlayerTurn = true
+        beginTurn(for: .opponent, after: "You ended your opening turn.")
+    }
+
+    private func appendedMessage(_ base: String, with suffix: String?) -> String {
+        guard let suffix, !suffix.isEmpty else { return base }
+        guard !base.isEmpty else { return suffix }
+        return "\(base) \(suffix)"
     }
 
     private func resolveKnockout(on defendingSide: BattleTurn, attackerName: String) {
@@ -371,7 +474,7 @@ final class GameViewModel: ObservableObject {
             }
 
             battleMessage = "\(attackerName) knocked out \(knockedOut?.name ?? "your active Pokemon"). \(replacement.name) moved up from your bench."
-            startPlayerTurn(after: battleMessage)
+            beginTurn(for: .player, after: battleMessage)
 
         case .opponent:
             let knockedOut = opponentBoard.discardActive()
@@ -385,14 +488,14 @@ final class GameViewModel: ObservableObject {
             }
 
             battleMessage = "\(attackerName) knocked out \(knockedOut?.name ?? "the opponent's active Pokemon"). \(replacement.name) moved up from the opponent bench."
-            startOpponentTurn(after: battleMessage)
+            beginTurn(for: .opponent, after: battleMessage)
         }
     }
 
     private func finishGame(title: String, message: String) {
         resultTitle = title
         resultMessage = message
-        gamePhase = .battle
+        gamePhase = .gameOver
         battleMessage = message
     }
 }
