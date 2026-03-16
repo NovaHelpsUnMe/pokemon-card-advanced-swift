@@ -54,6 +54,16 @@ let samplePokemon: [Pokemon] = [
         pokemonDescription: "A stronger electric Pokemon with solid overall stats."
     ),
     Pokemon(
+        imageName: "Pidgey",
+        name: "Pidgey",
+        maxHP: 100,
+        attackName: "Gust",
+        damage: 20,
+        attackDescription: "A quick flap attack that keeps pressure on the other side.",
+        type: "Normal/Flying",
+        pokemonDescription: "A light flying Pokemon that is useful for the bench or a fast opening."
+    ),
+    Pokemon(
         imageName: "Nova",
         name: "Nova",
         maxHP: 170,
@@ -67,3 +77,25 @@ let samplePokemon: [Pokemon] = [
 
 let playerStarter = samplePokemon.first { $0.name == "Pikachu" }!
 let opponentStarter = samplePokemon.first { $0.name == "Nova" }!
+
+func pokemon(named name: String) -> Pokemon {
+    samplePokemon.first { $0.name == name }!
+}
+
+let samplePlayerDeck: [Pokemon] = [
+    pokemon(named: "Pikachu"),
+    pokemon(named: "Bulbasaur"),
+    pokemon(named: "Charmander"),
+    pokemon(named: "Abra"),
+    pokemon(named: "Pidgey"),
+    pokemon(named: "Raichu")
+]
+
+let sampleOpponentDeck: [Pokemon] = [
+    pokemon(named: "Nova"),
+    pokemon(named: "Raichu"),
+    pokemon(named: "Pidgey"),
+    pokemon(named: "Charmander"),
+    pokemon(named: "Bulbasaur"),
+    pokemon(named: "Abra")
+]
