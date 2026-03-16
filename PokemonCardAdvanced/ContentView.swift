@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = GameViewModel()
     @State private var isHandSheetPresented = false
-    @State private var selectedCard: BattlePokemon?
+    @State private var selectedCard: CardDetailItem?
     @State private var isSelectingRetreatTarget = false
 
     var body: some View {
@@ -75,13 +75,19 @@ struct ContentView: View {
                 },
                 onAttachEnergy: { card in
                     viewModel.attachPlayerEnergy(to: card.id)
+                },
+                onEvolve: { card, target in
+                    viewModel.evolvePlayerPokemon(cardID: card.id, targetID: target.id)
+                },
+                onPlayTrainer: { card in
+                    viewModel.playTrainer(cardID: card.id)
                 }
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedCard) { card in
-            CardDetailSheetView(battlePokemon: card) {
+            CardDetailSheetView(item: card) {
                 selectedCard = nil
             }
         }
@@ -90,8 +96,8 @@ struct ContentView: View {
                 isSelectingRetreatTarget = false
             }
         }
-        .onChange(of: viewModel.gamePhase) { phase in
-            if phase != .battle {
+        .onChange(of: viewModel.shouldShowRetreatButton) { isVisible in
+            if !isVisible {
                 isSelectingRetreatTarget = false
             }
         }
@@ -230,7 +236,7 @@ struct ContentView: View {
         Group {
             if let card {
                 Button {
-                    selectedCard = card
+                    selectedCard = .boardPokemon(card)
                 } label: {
                     PokemonCardView(title: title, battlePokemon: card, displayStyle: .board)
                 }
@@ -252,16 +258,16 @@ struct ContentView: View {
         )
     }
 
-    private func inspectHandCard(_ card: BattlePokemon) {
+    private func inspectHandCard(_ card: BattleCard) {
         isHandSheetPresented = false
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            selectedCard = card
+            selectedCard = .handCard(card)
         }
     }
 
     private func toggleRetreatSelection() {
-        guard viewModel.gamePhase == .battle, !viewModel.isGameOver else {
+        guard viewModel.shouldShowRetreatButton else {
             return
         }
 
@@ -284,7 +290,7 @@ struct ContentView: View {
             return
         }
 
-        selectedCard = card
+        selectedCard = .boardPokemon(card)
     }
 }
 

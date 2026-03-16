@@ -32,19 +32,19 @@ enum GamePhase {
 
 struct PlayerBoard {
     let title: String
-    var deck: [BattlePokemon]
-    var hand: [BattlePokemon] = []
+    var deck: [BattleCard]
+    var hand: [BattleCard] = []
     var energyHandCount: Int = 0
     var active: BattlePokemon?
     var bench: [BattlePokemon] = []
-    var discard: [BattlePokemon] = []
+    var discard: [BattleCard] = []
     let maxBenchSize: Int = 3
 
     var deckCount: Int { deck.count }
     var handCount: Int { hand.count }
     var discardCount: Int { discard.count }
 
-    mutating func drawCards(_ count: Int) -> [BattlePokemon] {
+    mutating func drawCards(_ count: Int) -> [BattleCard] {
         guard count > 0, !deck.isEmpty else { return [] }
 
         let drawCount = min(count, deck.count)
@@ -54,18 +54,43 @@ struct PlayerBoard {
         return drawn
     }
 
-    mutating func moveHandCardToActive(cardID: UUID) -> BattlePokemon? {
-        guard active == nil, let index = hand.firstIndex(where: { $0.id == cardID }) else { return nil }
-        let card = hand.remove(at: index)
-        active = card
-        return card
+    mutating func moveHandCardToActive(cardID: UUID, countsAsPlayedThisTurn: Bool) -> BattlePokemon? {
+        guard active == nil,
+              let index = hand.firstIndex(where: { $0.id == cardID }),
+              let pokemon = hand[index].pokemon,
+              pokemon.stage == .basic else {
+            return nil
+        }
+
+        hand.remove(at: index)
+        let battlePokemon = BattlePokemon(
+            pokemon: pokemon,
+            wasPlayedThisTurn: countsAsPlayedThisTurn
+        )
+        active = battlePokemon
+        return battlePokemon
     }
 
-    mutating func moveHandCardToBench(cardID: UUID) -> BattlePokemon? {
-        guard bench.count < maxBenchSize, let index = hand.firstIndex(where: { $0.id == cardID }) else { return nil }
-        let card = hand.remove(at: index)
-        bench.append(card)
-        return card
+    mutating func moveHandCardToBench(cardID: UUID, countsAsPlayedThisTurn: Bool) -> BattlePokemon? {
+        guard bench.count < maxBenchSize,
+              let index = hand.firstIndex(where: { $0.id == cardID }),
+              let pokemon = hand[index].pokemon,
+              pokemon.stage == .basic else {
+            return nil
+        }
+
+        hand.remove(at: index)
+        let battlePokemon = BattlePokemon(
+            pokemon: pokemon,
+            wasPlayedThisTurn: countsAsPlayedThisTurn
+        )
+        bench.append(battlePokemon)
+        return battlePokemon
+    }
+
+    mutating func removeHandCard(cardID: UUID) -> BattleCard? {
+        guard let index = hand.firstIndex(where: { $0.id == cardID }) else { return nil }
+        return hand.remove(at: index)
     }
 
     mutating func drawEnergy(_ count: Int = 1) {
@@ -94,6 +119,11 @@ struct PlayerBoard {
 
     mutating func replaceActive(_ card: BattlePokemon?) {
         active = card
+    }
+
+    mutating func replaceBenchCard(targetID: UUID, with battlePokemon: BattlePokemon) {
+        guard let index = bench.firstIndex(where: { $0.id == targetID }) else { return }
+        bench[index] = battlePokemon
     }
 
     mutating func spendActiveEnergy(_ amount: Int) -> Bool {
@@ -127,13 +157,27 @@ struct PlayerBoard {
 
     mutating func discardActive() -> BattlePokemon? {
         guard let card = active else { return nil }
-        discard.append(card)
+        discard.append(contentsOf: card.discardCards())
         active = nil
         return card
     }
+
+    mutating func discardUsedTrainer(_ card: BattleCard) {
+        discard.append(card)
+    }
+
+    mutating func clearPlayedThisTurnFlags() {
+        if var active {
+            active.wasPlayedThisTurn = false
+            self.active = active
+        }
+
+        for index in bench.indices {
+            bench[index].wasPlayedThisTurn = false
+        }
+    }
 }
 
-// GameViewModel controls the battle rules and published game state.
 @MainActor
 final class GameViewModel: ObservableObject {
     private static let initialPrizeCount = 6
@@ -150,23 +194,32 @@ final class GameViewModel: ObservableObject {
     @Published var playerPrizeCount = GameViewModel.initialPrizeCount
     @Published var opponentPrizeCount = GameViewModel.initialPrizeCount
 
-    private let playerDeckSeed: [Pokemon]
-    private let opponentDeckSeed: [Pokemon]
+    private let playerDeckSeed: [CardDefinition]
+    private let opponentDeckSeed: [CardDefinition]
     private var hasCompletedOpeningPlayerTurn = false
 
-    init(playerDeck: [Pokemon]? = nil, opponentDeck: [Pokemon]? = nil) {
+    init(playerDeck: [CardDefinition]? = nil, opponentDeck: [CardDefinition]? = nil) {
         let resolvedPlayerDeck = playerDeck ?? samplePlayerDeck
         let resolvedOpponentDeck = opponentDeck ?? sampleOpponentDeck
         playerDeckSeed = resolvedPlayerDeck
         opponentDeckSeed = resolvedOpponentDeck
-        playerBoard = PlayerBoard(title: "Player", deck: resolvedPlayerDeck.map { BattlePokemon(pokemon: $0) })
-        opponentBoard = PlayerBoard(title: "Opponent", deck: resolvedOpponentDeck.map { BattlePokemon(pokemon: $0) })
+        playerBoard = PlayerBoard(title: "Player", deck: Self.makeDeck(from: resolvedPlayerDeck))
+        opponentBoard = PlayerBoard(title: "Opponent", deck: Self.makeDeck(from: resolvedOpponentDeck))
         battleMessage = "Choose an active Pokemon from your opening hand."
         restartGame()
     }
 
     var phaseLabel: String {
         gamePhase.label
+    }
+
+    var isBattleInProgress: Bool {
+        switch gamePhase {
+        case .draw, .action, .attack:
+            return true
+        case .setup, .gameOver:
+            return false
+        }
     }
 
     var isPlayerTurn: Bool {
@@ -249,18 +302,6 @@ final class GameViewModel: ObservableObject {
         isPlayerActionPhase && !isGameOver
     }
 
-    var canAttachPlayerEnergy: Bool {
-        !availablePlayerEnergyTargets.isEmpty
-    }
-
-    var isRestartButtonVisible: Bool {
-        true
-    }
-
-    var isRestartButtonEnabled: Bool {
-        true
-    }
-
     var playerHandButtonTitle: String {
         "Hand (\(playerBoard.handCount))"
     }
@@ -273,17 +314,17 @@ final class GameViewModel: ObservableObject {
         switch gamePhase {
         case .setup:
             if playerBoard.active == nil {
-                return "Choose an active Pokemon from your opening hand."
+                return "Choose a Basic Pokemon for your active spot."
             }
 
-            return "Add bench Pokemon or start the battle."
+            return "Add more Basic Pokemon to the bench or start the battle."
         case .draw:
             return isPlayerTurn ? "Drawing your turn card." : "Opponent is drawing a card."
         case .action:
             if isPlayerActionPhase {
                 return canEndPlayerTurn
-                    ? "Play a card to your bench or attach 1 Basic Energy, then end the turn."
-                    : "Play a card to your bench, attach 1 Basic Energy, or attack when ready."
+                    ? "Play a trainer, evolve a Pokemon, bench a Basic Pokemon, or attach 1 Basic Energy, then end the turn."
+                    : "Play a trainer, evolve a Pokemon, bench a Basic Pokemon, attach 1 Basic Energy, retreat, or attack when ready."
             }
 
             return "Wait for the opponent's turn to finish."
@@ -322,26 +363,72 @@ final class GameViewModel: ObservableObject {
         gamePhase == .setup && playerBoard.active != nil && opponentBoard.active != nil
     }
 
-    var canPlayerAddBenchCard: Bool {
-        playerBoard.bench.count < playerBoard.maxBenchSize
+    func canAssignPlayerActive(_ card: BattleCard) -> Bool {
+        gamePhase == .setup &&
+        playerBoard.active == nil &&
+        card.isBasicPokemon &&
+        playerBoard.hand.contains(where: { $0.id == card.id })
     }
 
-    func canAssignPlayerActive(_ card: BattlePokemon) -> Bool {
-        gamePhase == .setup && playerBoard.active == nil && playerBoard.hand.contains(card)
-    }
-
-    func canBenchPlayerCard(_ card: BattlePokemon) -> Bool {
+    func canBenchPlayerCard(_ card: BattleCard) -> Bool {
         !isGameOver &&
         playerBoard.bench.count < playerBoard.maxBenchSize &&
-        playerBoard.hand.contains(card) &&
+        card.isBasicPokemon &&
+        playerBoard.hand.contains(where: { $0.id == card.id }) &&
         (gamePhase == .setup || isPlayerActionPhase)
+    }
+
+    func playerActiveEvolutionTarget(for card: BattleCard) -> BattlePokemon? {
+        guard isPlayerActionPhase,
+              let evolution = card.pokemon,
+              evolution.stage != .basic,
+              playerBoard.hand.contains(where: { $0.id == card.id }),
+              let active = playerBoard.active,
+              active.canEvolve(with: evolution) else {
+            return nil
+        }
+
+        return active
+    }
+
+    func playerBenchEvolutionTargets(for card: BattleCard) -> [BattlePokemon] {
+        guard isPlayerActionPhase,
+              let evolution = card.pokemon,
+              evolution.stage != .basic,
+              playerBoard.hand.contains(where: { $0.id == card.id }) else {
+            return []
+        }
+
+        return playerBoard.bench.filter { $0.canEvolve(with: evolution) }
+    }
+
+    func canPlayTrainer(_ card: BattleCard) -> Bool {
+        guard isPlayerActionPhase,
+              !isGameOver,
+              playerBoard.hand.contains(where: { $0.id == card.id }),
+              let trainer = card.trainer else {
+            return false
+        }
+
+        switch trainer.effect {
+        case .draw:
+            return playerBoard.deckCount > 0
+        case .heal:
+            return (playerBoard.active?.damageTaken ?? 0) > 0
+        case .attachEnergy:
+            return playerBoard.active != nil
+        }
+    }
+
+    func trainerButtonTitle(for card: BattleCard) -> String? {
+        card.trainer?.effect.actionLabel
     }
 
     func canAttachPlayerEnergy(to card: BattlePokemon) -> Bool {
         availablePlayerEnergyTargets.contains(where: { $0.id == card.id })
     }
 
-    func handCardActionSummary(for card: BattlePokemon) -> String {
+    func handCardActionSummary(for card: BattleCard) -> String {
         if canAssignPlayerActive(card) {
             return "Make Active"
         }
@@ -350,8 +437,39 @@ final class GameViewModel: ObservableObject {
             return "Move to Bench"
         }
 
+        if let activeTarget = playerActiveEvolutionTarget(for: card) {
+            return "Evolve \(activeTarget.name)"
+        }
+
+        let benchTargets = playerBenchEvolutionTargets(for: card)
+        if !benchTargets.isEmpty {
+            return benchTargets.count == 1 ? "Evolve \(benchTargets[0].name)" : "Choose Evolution Target"
+        }
+
+        if canPlayTrainer(card), let title = trainerButtonTitle(for: card) {
+            return title
+        }
+
         if isGameOver {
             return "Unavailable"
+        }
+
+        if let pokemon = card.pokemon, pokemon.stage != .basic {
+            switch gamePhase {
+            case .setup:
+                return "Play after setup"
+            case .draw, .action, .attack, .gameOver:
+                return isPlayerActionPhase ? "Needs matching Pokemon" : "Unavailable"
+            }
+        }
+
+        if card.trainer != nil {
+            switch gamePhase {
+            case .setup:
+                return "Play during battle"
+            case .draw, .action, .attack, .gameOver:
+                return isPlayerActionPhase ? "No legal target" : "Unavailable"
+            }
         }
 
         switch gamePhase {
@@ -373,17 +491,91 @@ final class GameViewModel: ObservableObject {
     }
 
     func placePlayerActive(cardID: UUID) {
-        guard let card = playerBoard.moveHandCardToActive(cardID: cardID) else { return }
+        guard let card = playerBoard.moveHandCardToActive(
+            cardID: cardID,
+            countsAsPlayedThisTurn: gamePhase != .setup
+        ) else {
+            return
+        }
+
         battleMessage = "\(card.name) is now your active Pokemon. Add bench Pokemon or start the battle."
     }
 
     func placePlayerBench(cardID: UUID) {
-        guard let card = playerBoard.moveHandCardToBench(cardID: cardID) else { return }
+        guard let card = playerBoard.moveHandCardToBench(
+            cardID: cardID,
+            countsAsPlayedThisTurn: gamePhase != .setup
+        ) else {
+            return
+        }
 
         if gamePhase == .setup {
             battleMessage = "\(card.name) moved to your bench. You can add more bench Pokemon or start the battle."
         } else {
             battleMessage = "\(card.name) joined your bench from your hand."
+        }
+    }
+
+    func evolvePlayerPokemon(cardID: UUID, targetID: UUID) {
+        guard isPlayerActionPhase,
+              let handCard = playerBoard.hand.first(where: { $0.id == cardID }),
+              let evolution = handCard.pokemon,
+              evolution.stage != .basic else {
+            return
+        }
+
+        if let active = playerBoard.active,
+           active.id == targetID,
+           active.canEvolve(with: evolution) {
+            _ = playerBoard.removeHandCard(cardID: cardID)
+            let evolved = active.evolved(into: evolution)
+            playerBoard.replaceActive(evolved)
+            battleMessage = "\(active.name) evolved into \(evolved.name). It kept \(evolved.damageTaken) damage and \(evolved.attachedEnergy) attached energy."
+            return
+        }
+
+        guard let benchTarget = playerBoard.bench.first(where: { $0.id == targetID }),
+              benchTarget.canEvolve(with: evolution) else {
+            return
+        }
+
+        _ = playerBoard.removeHandCard(cardID: cardID)
+        let evolved = benchTarget.evolved(into: evolution)
+        playerBoard.replaceBenchCard(targetID: targetID, with: evolved)
+        battleMessage = "\(benchTarget.name) evolved into \(evolved.name). It kept \(evolved.damageTaken) damage and \(evolved.attachedEnergy) attached energy."
+    }
+
+    func playTrainer(cardID: UUID) {
+        guard let handCard = playerBoard.hand.first(where: { $0.id == cardID }),
+              let trainer = handCard.trainer,
+              canPlayTrainer(handCard),
+              let usedCard = playerBoard.removeHandCard(cardID: cardID) else {
+            return
+        }
+
+        defer {
+            playerBoard.discardUsedTrainer(usedCard)
+        }
+
+        switch trainer.effect {
+        case .draw(let cards):
+            let drawnCards = playerBoard.drawCards(cards)
+            if drawnCards.isEmpty {
+                battleMessage = "\(trainer.name) had no cards left to draw."
+            } else {
+                let names = drawnCards.map(\.name).joined(separator: ", ")
+                battleMessage = "\(trainer.name) drew \(drawnCards.count) card(s): \(names)."
+            }
+        case .heal(let amount):
+            guard var active = playerBoard.active else { return }
+            let healed = active.heal(amount)
+            playerBoard.replaceActive(active)
+            battleMessage = "\(trainer.name) healed \(active.name) for \(healed) HP."
+        case .attachEnergy(let amount):
+            guard var active = playerBoard.active else { return }
+            active.attachEnergy(amount)
+            playerBoard.replaceActive(active)
+            battleMessage = "\(trainer.name) added \(amount) energy to \(active.name). It now has \(active.attachedEnergy) attached energy."
         }
     }
 
@@ -409,7 +601,6 @@ final class GameViewModel: ObservableObject {
         guard
             canPlayerAttack,
             let attacker = playerBoard.active,
-            attacker.hasEnoughEnergyForAttack,
             var defender = opponentBoard.active
         else {
             return
@@ -443,8 +634,7 @@ final class GameViewModel: ObservableObject {
     }
 
     func attachPlayerEnergy(to cardID: UUID) {
-        guard !isGameOver,
-              isPlayerActionPhase,
+        guard isPlayerActionPhase,
               !hasPlayerAttachedEnergyThisTurn,
               let updatedCard = playerBoard.attachEnergy(to: cardID) else {
             return
@@ -460,8 +650,8 @@ final class GameViewModel: ObservableObject {
     }
 
     func restartGame() {
-        playerBoard = PlayerBoard(title: "Player", deck: playerDeckSeed.map { BattlePokemon(pokemon: $0) })
-        opponentBoard = PlayerBoard(title: "Opponent", deck: opponentDeckSeed.map { BattlePokemon(pokemon: $0) })
+        playerBoard = PlayerBoard(title: "Player", deck: Self.makeDeck(from: playerDeckSeed))
+        opponentBoard = PlayerBoard(title: "Opponent", deck: Self.makeDeck(from: opponentDeckSeed))
         playerPrizeCount = GameViewModel.initialPrizeCount
         opponentPrizeCount = GameViewModel.initialPrizeCount
         gamePhase = .setup
@@ -469,21 +659,16 @@ final class GameViewModel: ObservableObject {
         hasCompletedOpeningPlayerTurn = false
         hasPlayerAttachedEnergyThisTurn = false
         hasPlayerRetreatedThisTurn = false
-        playerBoard.drawCards(5)
-        opponentBoard.drawCards(5)
+        _ = playerBoard.drawCards(5)
+        _ = opponentBoard.drawCards(5)
         autoSetupOpponentBoard()
         battleMessage = "Choose an active Pokemon from your opening hand."
         resultTitle = nil
         resultMessage = nil
     }
 
-    private var isBattleInProgress: Bool {
-        switch gamePhase {
-        case .draw, .action, .attack:
-            return true
-        case .setup, .gameOver:
-            return false
-        }
+    private static func makeDeck(from seed: [CardDefinition]) -> [BattleCard] {
+        seed.map { BattleCard(card: $0) }
     }
 
     private var isOpeningPlayerTurnAttackBlocked: Bool {
@@ -537,29 +722,34 @@ final class GameViewModel: ObservableObject {
     }
 
     private func autoSetupOpponentBoard() {
-        if let activeCard = opponentBoard.hand.first {
-            _ = opponentBoard.moveHandCardToActive(cardID: activeCard.id)
+        if let activeCardID = opponentBoard.hand.first(where: \.isBasicPokemon)?.id {
+            _ = opponentBoard.moveHandCardToActive(cardID: activeCardID, countsAsPlayedThisTurn: false)
         }
 
-        while opponentBoard.bench.count < 2, let nextCard = opponentBoard.hand.first {
-            _ = opponentBoard.moveHandCardToBench(cardID: nextCard.id)
+        while opponentBoard.bench.count < 2,
+              let nextCardID = opponentBoard.hand.first(where: \.isBasicPokemon)?.id {
+            _ = opponentBoard.moveHandCardToBench(cardID: nextCardID, countsAsPlayedThisTurn: false)
         }
     }
 
     private func refillOpponentBenchIfPossible() {
-        while opponentBoard.bench.count < 2, let nextCard = opponentBoard.hand.first {
-            _ = opponentBoard.moveHandCardToBench(cardID: nextCard.id)
+        while opponentBoard.bench.count < 2,
+              let nextCardID = opponentBoard.hand.first(where: \.isBasicPokemon)?.id {
+            _ = opponentBoard.moveHandCardToBench(cardID: nextCardID, countsAsPlayedThisTurn: true)
         }
     }
 
     private func beginTurn(for turn: BattleTurn, after message: String) {
         currentTurn = turn
         gamePhase = .draw
+
         if turn == .player {
+            playerBoard.clearPlayedThisTurnFlags()
             hasPlayerAttachedEnergyThisTurn = false
             hasPlayerRetreatedThisTurn = false
             playerBoard.drawEnergy(1)
         } else {
+            opponentBoard.clearPlayedThisTurnFlags()
             opponentBoard.drawEnergy(1)
         }
 
