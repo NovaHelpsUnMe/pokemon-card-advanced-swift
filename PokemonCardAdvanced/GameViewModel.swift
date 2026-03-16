@@ -34,6 +34,7 @@ struct PlayerBoard {
     let title: String
     var deck: [BattlePokemon]
     var hand: [BattlePokemon] = []
+    var energyHandCount: Int = 0
     var active: BattlePokemon?
     var bench: [BattlePokemon] = []
     var discard: [BattlePokemon] = []
@@ -67,8 +68,41 @@ struct PlayerBoard {
         return card
     }
 
+    mutating func drawEnergy(_ count: Int = 1) {
+        guard count > 0 else { return }
+        energyHandCount += count
+    }
+
+    mutating func attachEnergy(to cardID: UUID) -> BattlePokemon? {
+        guard energyHandCount > 0 else { return nil }
+
+        if var activeCard = active, activeCard.id == cardID {
+            activeCard.attachEnergy()
+            active = activeCard
+            energyHandCount -= 1
+            return activeCard
+        }
+
+        guard let benchIndex = bench.firstIndex(where: { $0.id == cardID }) else {
+            return nil
+        }
+
+        bench[benchIndex].attachEnergy()
+        energyHandCount -= 1
+        return bench[benchIndex]
+    }
+
     mutating func replaceActive(_ card: BattlePokemon?) {
         active = card
+    }
+
+    mutating func spendActiveEnergy(_ amount: Int) -> Bool {
+        guard amount >= 0, var activeCard = active, activeCard.spendEnergy(amount) else {
+            return false
+        }
+
+        active = activeCard
+        return true
     }
 
     mutating func retreatActive(toBenchCardID cardID: UUID) -> BattlePokemon? {
@@ -111,6 +145,7 @@ final class GameViewModel: ObservableObject {
     @Published var battleMessage: String
     @Published var resultTitle: String?
     @Published var resultMessage: String?
+    @Published var hasPlayerAttachedEnergyThisTurn = false
     @Published var hasPlayerRetreatedThisTurn = false
     @Published var playerPrizeCount = GameViewModel.initialPrizeCount
     @Published var opponentPrizeCount = GameViewModel.initialPrizeCount
@@ -160,7 +195,11 @@ final class GameViewModel: ObservableObject {
             return "End Turn"
         }
 
-        "\(playerBoard.active?.attackName ?? "Attack")"
+        guard let active = playerBoard.active else {
+            return "Attack"
+        }
+
+        return "\(active.attackName) (\(active.attackEnergyCost))"
     }
 
     var isPrimaryActionEnabled: Bool {
@@ -173,7 +212,7 @@ final class GameViewModel: ObservableObject {
 
     var canPlayerAttack: Bool {
         isPlayerActionPhase &&
-        playerBoard.active != nil &&
+        playerBoard.active?.hasEnoughEnergyForAttack == true &&
         !isOpeningPlayerTurnAttackBlocked
     }
 
@@ -184,12 +223,22 @@ final class GameViewModel: ObservableObject {
     var availablePlayerRetreatTargets: [BattlePokemon] {
         guard isPlayerActionPhase,
               !hasPlayerRetreatedThisTurn,
-              playerBoard.active != nil,
+              playerBoard.active?.hasEnoughEnergyToRetreat == true,
               !playerBoard.bench.isEmpty else {
             return []
         }
 
         return playerBoard.bench
+    }
+
+    var availablePlayerEnergyTargets: [BattlePokemon] {
+        guard isPlayerActionPhase,
+              !hasPlayerAttachedEnergyThisTurn,
+              playerBoard.energyHandCount > 0 else {
+            return []
+        }
+
+        return [playerBoard.active].compactMap { $0 } + playerBoard.bench
     }
 
     var canRetreat: Bool {
@@ -198,6 +247,10 @@ final class GameViewModel: ObservableObject {
 
     var shouldShowRetreatButton: Bool {
         isPlayerActionPhase && !isGameOver
+    }
+
+    var canAttachPlayerEnergy: Bool {
+        !availablePlayerEnergyTargets.isEmpty
     }
 
     var isRestartButtonVisible: Bool {
@@ -229,8 +282,8 @@ final class GameViewModel: ObservableObject {
         case .action:
             if isPlayerActionPhase {
                 return canEndPlayerTurn
-                    ? "Play a card to your bench if needed, then end the turn."
-                    : "Play a card to your bench or attack when ready."
+                    ? "Play a card to your bench or attach 1 Basic Energy, then end the turn."
+                    : "Play a card to your bench, attach 1 Basic Energy, or attack when ready."
             }
 
             return "Wait for the opponent's turn to finish."
@@ -284,6 +337,10 @@ final class GameViewModel: ObservableObject {
         (gamePhase == .setup || isPlayerActionPhase)
     }
 
+    func canAttachPlayerEnergy(to card: BattlePokemon) -> Bool {
+        availablePlayerEnergyTargets.contains(where: { $0.id == card.id })
+    }
+
     func handCardActionSummary(for card: BattlePokemon) -> String {
         if canAssignPlayerActive(card) {
             return "Make Active"
@@ -334,6 +391,7 @@ final class GameViewModel: ObservableObject {
         guard canStartBattle else { return }
 
         hasCompletedOpeningPlayerTurn = false
+        hasPlayerAttachedEnergyThisTurn = false
         hasPlayerRetreatedThisTurn = false
         beginTurn(for: .player, after: "Setup complete. \(playerBoard.active?.name ?? "Your active Pokemon") goes first.")
     }
@@ -351,6 +409,7 @@ final class GameViewModel: ObservableObject {
         guard
             canPlayerAttack,
             let attacker = playerBoard.active,
+            attacker.hasEnoughEnergyForAttack,
             var defender = opponentBoard.active
         else {
             return
@@ -371,12 +430,33 @@ final class GameViewModel: ObservableObject {
     func performPlayerRetreat(to benchCardID: UUID) {
         guard canRetreat,
               let previousActive = playerBoard.active,
+              playerBoard.spendActiveEnergy(previousActive.retreatCost),
               let promoted = playerBoard.retreatActive(toBenchCardID: benchCardID) else {
             return
         }
 
         hasPlayerRetreatedThisTurn = true
-        battleMessage = "\(previousActive.name) retreated. \(promoted.name) moved up from your bench."
+        let retreatText = previousActive.retreatCost == 0
+            ? "\(previousActive.name) retreated."
+            : "\(previousActive.name) spent \(previousActive.retreatCost) Energy and retreated."
+        battleMessage = "\(retreatText) \(promoted.name) moved up from your bench."
+    }
+
+    func attachPlayerEnergy(to cardID: UUID) {
+        guard !isGameOver,
+              isPlayerActionPhase,
+              !hasPlayerAttachedEnergyThisTurn,
+              let updatedCard = playerBoard.attachEnergy(to: cardID) else {
+            return
+        }
+
+        hasPlayerAttachedEnergyThisTurn = true
+
+        if updatedCard.hasEnoughEnergyForAttack {
+            battleMessage = "Attached 1 Basic Energy to \(updatedCard.name). It is ready to use \(updatedCard.attackName)."
+        } else {
+            battleMessage = "Attached 1 Basic Energy to \(updatedCard.name). It now has \(updatedCard.attachedEnergy)/\(updatedCard.attackEnergyCost) Energy for \(updatedCard.attackName)."
+        }
     }
 
     func restartGame() {
@@ -387,6 +467,7 @@ final class GameViewModel: ObservableObject {
         gamePhase = .setup
         currentTurn = .player
         hasCompletedOpeningPlayerTurn = false
+        hasPlayerAttachedEnergyThisTurn = false
         hasPlayerRetreatedThisTurn = false
         playerBoard.drawCards(5)
         opponentBoard.drawCards(5)
@@ -433,6 +514,12 @@ final class GameViewModel: ObservableObject {
             return
         }
 
+        guard attacker.hasEnoughEnergyForAttack else {
+            refillOpponentBenchIfPossible()
+            beginTurn(for: .player, after: "\(attacker.name) does not have enough Energy to attack.")
+            return
+        }
+
         defender.currentHP = updatedHP(afterAttacking: attacker, defender: defender)
         playerBoard.replaceActive(defender)
 
@@ -468,19 +555,34 @@ final class GameViewModel: ObservableObject {
     private func beginTurn(for turn: BattleTurn, after message: String) {
         currentTurn = turn
         gamePhase = .draw
-        hasPlayerRetreatedThisTurn = turn == .player ? false : hasPlayerRetreatedThisTurn
+        if turn == .player {
+            hasPlayerAttachedEnergyThisTurn = false
+            hasPlayerRetreatedThisTurn = false
+            playerBoard.drawEnergy(1)
+        } else {
+            opponentBoard.drawEnergy(1)
+        }
 
         let drawMessage: String?
+        let energyMessage: String
+        var followUpMessage: String?
 
         switch turn {
         case .player:
             drawMessage = playerBoard.drawCards(1).first.map { "You drew \($0.name)." }
+            energyMessage = "You drew 1 Basic Energy."
         case .opponent:
             drawMessage = opponentBoard.drawCards(1).first.map { "Opponent drew \($0.name)." }
             refillOpponentBenchIfPossible()
+            energyMessage = "Opponent drew 1 Basic Energy."
+            followUpMessage = opponentAutoAttachEnergy()
         }
 
-        enterActionPhase(for: turn, after: appendedMessage(message, with: drawMessage))
+        let updatedMessage = appendedMessage(
+            appendedMessage(appendedMessage(message, with: drawMessage), with: energyMessage),
+            with: followUpMessage
+        )
+        enterActionPhase(for: turn, after: updatedMessage)
     }
 
     private func enterActionPhase(for turn: BattleTurn, after message: String) {
@@ -578,5 +680,20 @@ final class GameViewModel: ObservableObject {
         resultMessage = message
         gamePhase = .gameOver
         battleMessage = message
+    }
+
+    private func opponentAutoAttachEnergy() -> String? {
+        guard opponentBoard.energyHandCount > 0 else {
+            return nil
+        }
+
+        let targetID = opponentBoard.active?.id ?? opponentBoard.bench.first?.id
+
+        guard let targetID,
+              let updatedCard = opponentBoard.attachEnergy(to: targetID) else {
+            return nil
+        }
+
+        return "Opponent attached 1 Basic Energy to \(updatedCard.name)."
     }
 }
