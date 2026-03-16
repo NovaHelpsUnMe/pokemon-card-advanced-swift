@@ -71,6 +71,8 @@ struct PlayerBoard {
 // GameViewModel controls the battle rules and published game state.
 @MainActor
 final class GameViewModel: ObservableObject {
+    private static let initialPrizeCount = 6
+
     @Published var playerBoard: PlayerBoard
     @Published var opponentBoard: PlayerBoard
     @Published var gamePhase: GamePhase = .setup
@@ -78,10 +80,11 @@ final class GameViewModel: ObservableObject {
     @Published var battleMessage: String
     @Published var resultTitle: String?
     @Published var resultMessage: String?
+    @Published var playerPrizeCount = GameViewModel.initialPrizeCount
+    @Published var opponentPrizeCount = GameViewModel.initialPrizeCount
 
     private let playerDeckSeed: [Pokemon]
     private let opponentDeckSeed: [Pokemon]
-    private let placeholderPrizeCount = 6
 
     init(playerDeck: [Pokemon]? = nil, opponentDeck: [Pokemon]? = nil) {
         let resolvedPlayerDeck = playerDeck ?? samplePlayerDeck
@@ -170,7 +173,7 @@ final class GameViewModel: ObservableObject {
     }
 
     var playerPrizesRemaining: Int {
-        placeholderPrizeCount
+        playerPrizeCount
     }
 
     var opponentVisibleDeckCount: Int {
@@ -182,7 +185,7 @@ final class GameViewModel: ObservableObject {
     }
 
     var opponentPrizesRemaining: Int {
-        placeholderPrizeCount
+        opponentPrizeCount
     }
 
     var canStartBattle: Bool {
@@ -275,6 +278,8 @@ final class GameViewModel: ObservableObject {
     func restartGame() {
         playerBoard = PlayerBoard(title: "Player", deck: playerDeckSeed.map { BattlePokemon(pokemon: $0) })
         opponentBoard = PlayerBoard(title: "Opponent", deck: opponentDeckSeed.map { BattlePokemon(pokemon: $0) })
+        playerPrizeCount = GameViewModel.initialPrizeCount
+        opponentPrizeCount = GameViewModel.initialPrizeCount
         gamePhase = .setup
         currentTurn = .player
         playerBoard.drawCards(5)
@@ -360,32 +365,61 @@ final class GameViewModel: ObservableObject {
     private func resolveKnockout(on defendingSide: BattleTurn, attackerName: String) {
         switch defendingSide {
         case .player:
-            let knockedOut = playerBoard.discardActive()
+            let knockedOutName = playerBoard.discardActive()?.name ?? "your active Pokemon"
+            let opponentPrizesRemaining = takePrize(for: .opponent)
+
+            if opponentPrizesRemaining == 0 {
+                finishGame(
+                    title: "You Lose",
+                    message: "\(attackerName) knocked out \(knockedOutName) and took the final prize."
+                )
+                return
+            }
 
             guard let replacement = playerBoard.promoteFirstBenchToActive() else {
                 finishGame(
                     title: "You Lose",
-                    message: "\(attackerName) knocked out \(knockedOut?.name ?? "your active Pokemon")."
+                    message: "\(attackerName) knocked out \(knockedOutName)."
                 )
                 return
             }
 
-            battleMessage = "\(attackerName) knocked out \(knockedOut?.name ?? "your active Pokemon"). \(replacement.name) moved up from your bench."
+            battleMessage = "\(attackerName) knocked out \(knockedOutName). Opponent took a prize. \(replacement.name) moved up from your bench."
             startPlayerTurn(after: battleMessage)
 
         case .opponent:
-            let knockedOut = opponentBoard.discardActive()
+            let knockedOutName = opponentBoard.discardActive()?.name ?? "the opponent's active Pokemon"
+            let playerPrizesRemaining = takePrize(for: .player)
+
+            if playerPrizesRemaining == 0 {
+                finishGame(
+                    title: "You Win!",
+                    message: "\(attackerName) knocked out \(knockedOutName) and took your final prize."
+                )
+                return
+            }
 
             guard let replacement = opponentBoard.promoteFirstBenchToActive() else {
                 finishGame(
                     title: "You Win!",
-                    message: "\(attackerName) knocked out \(knockedOut?.name ?? "the opponent's active Pokemon")."
+                    message: "\(attackerName) knocked out \(knockedOutName)."
                 )
                 return
             }
 
-            battleMessage = "\(attackerName) knocked out \(knockedOut?.name ?? "the opponent's active Pokemon"). \(replacement.name) moved up from the opponent bench."
+            battleMessage = "\(attackerName) knocked out \(knockedOutName). You took a prize. \(replacement.name) moved up from the opponent bench."
             startOpponentTurn(after: battleMessage)
+        }
+    }
+
+    private func takePrize(for side: BattleTurn) -> Int {
+        switch side {
+        case .player:
+            playerPrizeCount = max(playerPrizeCount - 1, 0)
+            return playerPrizeCount
+        case .opponent:
+            opponentPrizeCount = max(opponentPrizeCount - 1, 0)
+            return opponentPrizeCount
         }
     }
 
