@@ -96,7 +96,7 @@ final class GameViewModel: ObservableObject {
         case .setup:
             return "Setup Phase"
         case .battle:
-            return turnLabel
+            return isGameOver ? "Game Over" : turnLabel
         }
     }
 
