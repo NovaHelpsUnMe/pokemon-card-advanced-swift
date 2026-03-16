@@ -3,6 +3,7 @@ import SwiftUI
 struct BenchRowView: View {
     let cards: [BattlePokemon]
     let maxSlots: Int
+    var onSelectCard: ((BattlePokemon) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -12,7 +13,12 @@ struct BenchRowView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(cards) { card in
-                        CompactBenchCardView(battlePokemon: card)
+                        CompactBenchCardView(
+                            battlePokemon: card,
+                            onTap: onSelectCard.map { callback in
+                                { callback(card) }
+                            }
+                        )
                     }
 
                     ForEach(0..<max(0, maxSlots - cards.count), id: \.self) { _ in
@@ -27,14 +33,28 @@ struct BenchRowView: View {
 
 private struct CompactBenchCardView: View {
     let battlePokemon: BattlePokemon
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
+        Group {
+            if let onTap {
+                Button(action: onTap) {
+                    benchCard
+                }
+                .buttonStyle(.plain)
+            } else {
+                benchCard
+            }
+        }
+        .accessibilityLabel("\(battlePokemon.name) on bench")
+    }
+
+    private var benchCard: some View {
         PokemonCardView(title: "Bench", battlePokemon: battlePokemon)
             .frame(width: 136, height: 188, alignment: .top)
             .scaleEffect(x: 0.68, y: 0.68, anchor: .topLeading)
             .frame(width: 94, height: 128, alignment: .topLeading)
             .clipped()
-            .accessibilityLabel("\(battlePokemon.name) on bench")
     }
 }
 

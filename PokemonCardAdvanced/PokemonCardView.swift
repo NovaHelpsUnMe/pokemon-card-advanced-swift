@@ -1,8 +1,14 @@
 import SwiftUI
 
+enum PokemonCardDisplayStyle {
+    case standard
+    case board
+}
+
 struct PokemonCardView: View {
     let title: String
     let battlePokemon: BattlePokemon?
+    var displayStyle: PokemonCardDisplayStyle = .standard
 
     // Card color matches the Pokemon type to keep the original theme.
     var backgroundColor: Color {
@@ -28,8 +34,32 @@ struct PokemonCardView: View {
         }
     }
 
+    private var imageSize: CGFloat {
+        displayStyle == .board ? 76 : 120
+    }
+
+    private var nameFont: Font {
+        displayStyle == .board ? .headline : .title2
+    }
+
+    private var attackTitleFont: Font {
+        displayStyle == .board ? .subheadline : .headline
+    }
+
+    private var attackFont: Font {
+        displayStyle == .board ? .caption : .subheadline
+    }
+
+    private var bodyFont: Font {
+        displayStyle == .board ? .caption2 : .caption
+    }
+
+    private var showsFlavorText: Bool {
+        displayStyle == .standard
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: displayStyle == .board ? 10 : 12) {
             HStack {
                 Text(title)
                     .font(.caption)
@@ -50,44 +80,49 @@ struct PokemonCardView: View {
 
             if let battlePokemon {
                 Text(battlePokemon.name)
-                    .font(.title2)
+                    .font(nameFont)
                     .fontWeight(.bold)
+                    .lineLimit(displayStyle == .board ? 1 : 2)
 
                 ProgressView(value: Double(battlePokemon.currentHP), total: Double(battlePokemon.maxHP))
                     .tint(.red)
 
-                HStack(spacing: 16) {
+                HStack(spacing: displayStyle == .board ? 12 : 16) {
                     Image(battlePokemon.imageName)
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 120, height: 120)
+                        .frame(width: imageSize, height: imageSize)
                         .padding(8)
                         .background(Color.white.opacity(0.65))
                         .clipShape(RoundedRectangle(cornerRadius: 16))
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Attack")
-                            .font(.headline)
+                            .font(attackTitleFont)
 
                         Text(battlePokemon.attackName)
-                            .font(.subheadline)
+                            .font(attackFont)
                             .fontWeight(.semibold)
+                            .lineLimit(displayStyle == .board ? 1 : 2)
 
                         Text("Damage: \(battlePokemon.damage)")
-                            .font(.subheadline)
+                            .font(attackFont)
 
                         Text(battlePokemon.attackDescription)
-                            .font(.caption)
+                            .font(bodyFont)
+                            .lineLimit(displayStyle == .board ? 2 : nil)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
-                Divider()
+                if showsFlavorText {
+                    Divider()
 
-                Text(battlePokemon.pokemonDescription)
-                    .font(.caption)
-                    .italic()
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text(battlePokemon.pokemonDescription)
+                        .font(.caption)
+                        .italic()
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Empty Slot")
@@ -101,7 +136,7 @@ struct PokemonCardView: View {
                 .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
             }
         }
-        .padding()
+        .padding(displayStyle == .board ? 14 : 16)
         .background(backgroundColor.opacity(0.45))
         .clipShape(RoundedRectangle(cornerRadius: 22))
         .overlay(
