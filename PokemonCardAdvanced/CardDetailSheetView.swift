@@ -15,7 +15,10 @@ struct CardDetailSheetView: View {
                             DetailRow(label: "Pokemon", value: battlePokemon.name)
                             DetailRow(label: "Type", value: battlePokemon.type)
                             DetailRow(label: "HP", value: "\(battlePokemon.currentHP) / \(battlePokemon.maxHP)")
+                            DetailRow(label: "Attached Energy", value: "\(battlePokemon.attachedEnergy)")
                             DetailRow(label: "Attack", value: battlePokemon.attackName)
+                            DetailRow(label: "Attack Cost", value: "\(battlePokemon.attackEnergyCost)")
+                            DetailRow(label: "Retreat Cost", value: "\(battlePokemon.retreatCost)")
                             DetailRow(label: "Damage", value: "\(battlePokemon.damage)")
                         }
 

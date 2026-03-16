@@ -197,6 +197,8 @@ struct PokemonCardView: View {
                 Spacer()
 
                 if let battlePokemon {
+                    energyBadge(value: battlePokemon.attachedEnergy)
+
                     Text("HP \(battlePokemon.currentHP)/\(battlePokemon.maxHP)")
                         .font(hpFont)
                         .fontWeight(.bold)
@@ -228,6 +230,10 @@ struct PokemonCardView: View {
                         Text("Damage: \(battlePokemon.damage)")
                             .font(attackFont)
 
+                        Text("Cost: \(battlePokemon.attackEnergyCost)  Retreat: \(battlePokemon.retreatCost)")
+                            .font(bodyFont)
+                            .foregroundStyle(.secondary)
+
                         Text(battlePokemon.attackDescription)
                             .font(bodyFont)
                             .lineLimit(displayStyle == .board ? 2 : nil)
@@ -257,6 +263,8 @@ struct PokemonCardView: View {
                 Spacer(minLength: 2)
 
                 if let battlePokemon {
+                    energyBadge(value: battlePokemon.attachedEnergy)
+
                     Text("\(battlePokemon.currentHP)/\(battlePokemon.maxHP)")
                         .font(hpFont)
                         .fontWeight(.bold)
@@ -304,6 +312,16 @@ struct PokemonCardView: View {
             .padding(.horizontal, displayStyle == .benchCompact ? 6 : 10)
             .padding(.vertical, displayStyle == .benchCompact ? 2 : 4)
             .background(Color.black.opacity(0.12))
+            .clipShape(Capsule())
+    }
+
+    private func energyBadge(value: Int) -> some View {
+        Text("E \(value)")
+            .font(displayStyle == .benchCompact ? .system(size: 8, weight: .bold) : .caption)
+            .fontWeight(.bold)
+            .padding(.horizontal, displayStyle == .benchCompact ? 5 : 8)
+            .padding(.vertical, displayStyle == .benchCompact ? 2 : 4)
+            .background(Color.white.opacity(0.85))
             .clipShape(Capsule())
     }
 

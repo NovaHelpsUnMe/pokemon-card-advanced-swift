@@ -72,6 +72,9 @@ struct ContentView: View {
                 },
                 onMoveToBench: { card in
                     viewModel.placePlayerBench(cardID: card.id)
+                },
+                onAttachEnergy: { card in
+                    viewModel.attachPlayerEnergy(to: card.id)
                 }
             )
             .presentationDetents([.medium, .large])
@@ -109,6 +112,7 @@ struct ContentView: View {
                 label: viewModel.opponentBoard.title,
                 deckCount: viewModel.opponentVisibleDeckCount,
                 discardCount: viewModel.opponentVisibleDiscardCount,
+                energyCount: viewModel.opponentBoard.energyHandCount,
                 prizeCount: viewModel.opponentPrizesRemaining
             )
 
@@ -136,6 +140,7 @@ struct ContentView: View {
                 label: viewModel.playerBoard.title,
                 deckCount: viewModel.playerVisibleDeckCount,
                 discardCount: viewModel.playerVisibleDiscardCount,
+                energyCount: viewModel.playerBoard.energyHandCount,
                 prizeCount: viewModel.playerPrizesRemaining
             )
         }

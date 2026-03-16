@@ -5,6 +5,7 @@ struct HandSheetView: View {
     var onSelectCard: ((BattlePokemon) -> Void)? = nil
     var onMakeActive: ((BattlePokemon) -> Void)? = nil
     var onMoveToBench: ((BattlePokemon) -> Void)? = nil
+    var onAttachEnergy: ((BattlePokemon) -> Void)? = nil
 
     private let columns = [
         GridItem(.adaptive(minimum: 150, maximum: 190), spacing: 14, alignment: .top)
@@ -23,6 +24,19 @@ struct HandSheetView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 2)
+
+            if viewModel.gamePhase == .battle {
+                EnergyAttachmentPanel(
+                    energyInHand: viewModel.playerBoard.energyHandCount,
+                    hasAttachedThisTurn: viewModel.hasPlayerAttachedEnergyThisTurn,
+                    isPlayerTurn: viewModel.isPlayerTurn,
+                    targets: viewModel.availablePlayerEnergyTargets,
+                    canAttachTo: viewModel.canAttachPlayerEnergy(to:),
+                    onAttachEnergy: { card in
+                        onAttachEnergy?(card)
+                    }
+                )
+            }
 
             if viewModel.playerBoard.hand.isEmpty {
                 ContentUnavailableView(
@@ -57,6 +71,93 @@ struct HandSheetView: View {
             RoundedRectangle(cornerRadius: 28)
                 .fill(Color(.systemBackground))
         )
+    }
+}
+
+private struct EnergyAttachmentPanel: View {
+    let energyInHand: Int
+    let hasAttachedThisTurn: Bool
+    let isPlayerTurn: Bool
+    let targets: [BattlePokemon]
+    let canAttachTo: (BattlePokemon) -> Bool
+    let onAttachEnergy: (BattlePokemon) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("Basic Energy")
+                    .font(.headline)
+
+                Text("x\(energyInHand)")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.12))
+                    .clipShape(Capsule())
+
+                Spacer()
+
+                Text(hasAttachedThisTurn ? "Attachment used" : "1 attachment available")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(hasAttachedThisTurn ? .secondary : .blue)
+            }
+
+            if targets.isEmpty {
+                Text(emptyStateMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Attach to a Pokemon in play:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    ForEach(targets) { card in
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(card.name)
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+
+                                Text("Attached \(card.attachedEnergy) • Attack \(card.attackEnergyCost) • Retreat \(card.retreatCost)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Button("Attach") {
+                                onAttachEnergy(card)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                            .disabled(!canAttachTo(card))
+                        }
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var emptyStateMessage: String {
+        if hasAttachedThisTurn {
+            return "You already attached a Basic Energy this turn."
+        }
+
+        if !isPlayerTurn {
+            return "Energy attachments are only available during your turn."
+        }
+
+        if energyInHand == 0 {
+            return "You do not have any Basic Energy in hand right now."
+        }
+
+        return "Put a Pokemon in play to attach your Basic Energy."
     }
 }
 
