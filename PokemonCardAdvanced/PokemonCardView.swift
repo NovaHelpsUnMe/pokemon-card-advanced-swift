@@ -3,6 +3,7 @@ import SwiftUI
 enum PokemonCardDisplayStyle {
     case standard
     case board
+    case benchCompact
 }
 
 struct PokemonCardView: View {
@@ -35,23 +36,78 @@ struct PokemonCardView: View {
     }
 
     private var imageSize: CGFloat {
-        displayStyle == .board ? 72 : 120
+        switch displayStyle {
+        case .standard:
+            return 120
+        case .board:
+            return 72
+        case .benchCompact:
+            return 34
+        }
+    }
+
+    private var titleFont: Font {
+        switch displayStyle {
+        case .standard, .board:
+            return .caption
+        case .benchCompact:
+            return .system(size: 8, weight: .semibold)
+        }
+    }
+
+    private var hpFont: Font {
+        switch displayStyle {
+        case .standard:
+            return .subheadline
+        case .board:
+            return .caption
+        case .benchCompact:
+            return .system(size: 8, weight: .bold)
+        }
     }
 
     private var nameFont: Font {
-        displayStyle == .board ? .headline : .title2
+        switch displayStyle {
+        case .standard:
+            return .title2
+        case .board:
+            return .headline
+        case .benchCompact:
+            return .system(size: 10, weight: .bold)
+        }
     }
 
     private var attackTitleFont: Font {
-        displayStyle == .board ? .caption : .headline
+        switch displayStyle {
+        case .standard:
+            return .headline
+        case .board:
+            return .caption
+        case .benchCompact:
+            return .system(size: 8, weight: .medium)
+        }
     }
 
     private var attackFont: Font {
-        displayStyle == .board ? .caption : .subheadline
+        switch displayStyle {
+        case .standard:
+            return .subheadline
+        case .board:
+            return .caption
+        case .benchCompact:
+            return .system(size: 8, weight: .semibold)
+        }
     }
 
     private var bodyFont: Font {
-        displayStyle == .board ? .caption2 : .caption
+        switch displayStyle {
+        case .standard:
+            return .caption
+        case .board:
+            return .caption2
+        case .benchCompact:
+            return .system(size: 8)
+        }
     }
 
     private var showsFlavorText: Bool {
@@ -59,29 +115,90 @@ struct PokemonCardView: View {
     }
 
     private var cardSpacing: CGFloat {
-        displayStyle == .board ? 8 : 12
+        switch displayStyle {
+        case .standard:
+            return 12
+        case .board:
+            return 8
+        case .benchCompact:
+            return 4
+        }
     }
 
     private var cardPadding: CGFloat {
-        displayStyle == .board ? 12 : 16
+        switch displayStyle {
+        case .standard:
+            return 16
+        case .board:
+            return 12
+        case .benchCompact:
+            return 6
+        }
+    }
+
+    private var artworkPadding: CGFloat {
+        switch displayStyle {
+        case .standard:
+            return 8
+        case .board:
+            return 6
+        case .benchCompact:
+            return 3
+        }
+    }
+
+    private var artworkCornerRadius: CGFloat {
+        switch displayStyle {
+        case .standard:
+            return 16
+        case .board:
+            return 14
+        case .benchCompact:
+            return 10
+        }
+    }
+
+    private var cardCornerRadius: CGFloat {
+        displayStyle == .benchCompact ? 16 : 22
+    }
+
+    private var cardBorderWidth: CGFloat {
+        displayStyle == .benchCompact ? 1.5 : 2
+    }
+
+    private var cardShadowRadius: CGFloat {
+        displayStyle == .benchCompact ? 4 : 8
     }
 
     var body: some View {
+        Group {
+            switch displayStyle {
+            case .standard, .board:
+                standardCardContent
+            case .benchCompact:
+                compactBenchCardContent
+            }
+        }
+        .padding(cardPadding)
+        .background(backgroundColor.opacity(0.45))
+        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: cardCornerRadius)
+                .stroke(Color.black.opacity(0.2), lineWidth: cardBorderWidth)
+        )
+        .shadow(color: .black.opacity(0.1), radius: cardShadowRadius, x: 0, y: 4)
+    }
+
+    private var standardCardContent: some View {
         VStack(alignment: .leading, spacing: cardSpacing) {
             HStack {
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.black.opacity(0.12))
-                    .clipShape(Capsule())
+                titleBadge
 
                 Spacer()
 
                 if let battlePokemon {
                     Text("HP \(battlePokemon.currentHP)/\(battlePokemon.maxHP)")
-                        .font(displayStyle == .board ? .caption : .subheadline)
+                        .font(hpFont)
                         .fontWeight(.bold)
                 }
             }
@@ -96,13 +213,7 @@ struct PokemonCardView: View {
                     .tint(.red)
 
                 HStack(alignment: .top, spacing: displayStyle == .board ? 10 : 16) {
-                    Image(battlePokemon.imageName)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: imageSize, height: imageSize)
-                        .padding(displayStyle == .board ? 6 : 8)
-                        .background(Color.white.opacity(0.65))
-                        .clipShape(RoundedRectangle(cornerRadius: displayStyle == .board ? 14 : 16))
+                    artworkView(for: battlePokemon)
 
                     VStack(alignment: .leading, spacing: displayStyle == .board ? 5 : 8) {
                         Text("Attack")
@@ -133,26 +244,90 @@ struct PokemonCardView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Empty Slot")
-                        .font(displayStyle == .board ? .headline : .title3)
-                        .fontWeight(.bold)
-
-                    Text("Choose a Pokemon from your hand during setup or wait for a bench promotion.")
-                        .font(displayStyle == .board ? .caption : .subheadline)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
+                emptyCardContent
             }
         }
-        .padding(cardPadding)
-        .background(backgroundColor.opacity(0.45))
-        .clipShape(RoundedRectangle(cornerRadius: 22))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22)
-                .stroke(Color.black.opacity(0.2), lineWidth: 2)
-        )
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+    }
+
+    private var compactBenchCardContent: some View {
+        VStack(alignment: .leading, spacing: cardSpacing) {
+            HStack(spacing: 4) {
+                titleBadge
+
+                Spacer(minLength: 2)
+
+                if let battlePokemon {
+                    Text("\(battlePokemon.currentHP)/\(battlePokemon.maxHP)")
+                        .font(hpFont)
+                        .fontWeight(.bold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
+
+            if let battlePokemon {
+                Text(battlePokemon.name)
+                    .font(nameFont)
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                ProgressView(value: Double(battlePokemon.currentHP), total: Double(battlePokemon.maxHP))
+                    .tint(.red)
+                    .scaleEffect(x: 1, y: 0.75, anchor: .center)
+
+                artworkView(for: battlePokemon)
+                    .frame(maxWidth: .infinity)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(battlePokemon.attackName)
+                        .font(attackFont)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
+                    Text("\(battlePokemon.damage) dmg")
+                        .font(bodyFont)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            } else {
+                emptyCardContent
+            }
+        }
+    }
+
+    private var titleBadge: some View {
+        Text(title)
+            .font(titleFont)
+            .fontWeight(.semibold)
+            .padding(.horizontal, displayStyle == .benchCompact ? 6 : 10)
+            .padding(.vertical, displayStyle == .benchCompact ? 2 : 4)
+            .background(Color.black.opacity(0.12))
+            .clipShape(Capsule())
+    }
+
+    private var emptyCardContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Empty Slot")
+                .font(displayStyle == .standard ? .title3 : .headline)
+                .fontWeight(.bold)
+
+            Text("Choose a Pokemon from your hand during setup or wait for a bench promotion.")
+                .font(displayStyle == .standard ? .subheadline : .caption)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: displayStyle == .benchCompact ? 0 : 120, alignment: .leading)
+    }
+
+    private func artworkView(for battlePokemon: BattlePokemon) -> some View {
+        Image(battlePokemon.imageName)
+            .resizable()
+            .scaledToFit()
+            .frame(width: imageSize, height: imageSize)
+            .padding(artworkPadding)
+            .background(Color.white.opacity(0.65))
+            .clipShape(RoundedRectangle(cornerRadius: artworkCornerRadius))
     }
 }
 

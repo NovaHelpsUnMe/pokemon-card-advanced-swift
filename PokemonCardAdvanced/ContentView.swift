@@ -11,6 +11,7 @@ struct ContentView: View {
             let compactHeight = geometry.size.height < 780
             let boardSpacing: CGFloat = compactHeight ? 8 : 10
             let horizontalPadding: CGFloat = geometry.size.width <= 375 ? 10 : 12
+            let scrollContentBottomInset: CGFloat = 128 + geometry.safeAreaInsets.bottom
 
             ZStack {
                 LinearGradient(
@@ -23,16 +24,21 @@ struct ContentView: View {
                 )
                 .ignoresSafeArea()
 
-                VStack(spacing: boardSpacing) {
-                    boardTitle
-                    opponentSection
-                    battleStatusPanel
-                    playerSection
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: boardSpacing) {
+                        boardTitle
+                        opponentSection
+                        battleStatusPanel
+                        playerSection
+                        Color.clear
+                            .frame(height: scrollContentBottomInset)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.top, topInset)
+                    .padding(.bottom, compactHeight ? 10 : 14)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.horizontal, horizontalPadding)
-                .padding(.top, topInset)
-                .padding(.bottom, compactHeight ? 10 : 14)
             }
         }
         .safeAreaInset(edge: .bottom) {

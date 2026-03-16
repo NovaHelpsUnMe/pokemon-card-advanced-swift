@@ -53,11 +53,12 @@ private struct CompactBenchCardView: View {
     }
 
     private var benchCard: some View {
-        PokemonCardView(title: "Bench", battlePokemon: battlePokemon)
-            .frame(width: 132, height: 182, alignment: .top)
-            .scaleEffect(x: 0.64, y: 0.64, anchor: .topLeading)
-            .frame(width: 86, height: 118, alignment: .topLeading)
-            .clipped()
+        PokemonCardView(
+            title: "Bench",
+            battlePokemon: battlePokemon,
+            displayStyle: .benchCompact
+        )
+        .frame(width: 86, height: 118, alignment: .top)
     }
 }
 
