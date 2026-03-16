@@ -1,8 +1,8 @@
 import Foundation
 
 // Base Pokemon data used to build battle characters.
-struct Pokemon: Identifiable {
-    let id = UUID()
+struct Pokemon: Identifiable, Hashable {
+    let id: String
     let imageName: String
     let name: String
     let maxHP: Int
@@ -11,14 +11,37 @@ struct Pokemon: Identifiable {
     let attackDescription: String
     let type: String
     let pokemonDescription: String
+
+    init(
+        imageName: String,
+        name: String,
+        maxHP: Int,
+        attackName: String,
+        damage: Int,
+        attackDescription: String,
+        type: String,
+        pokemonDescription: String
+    ) {
+        id = name
+        self.imageName = imageName
+        self.name = name
+        self.maxHP = maxHP
+        self.attackName = attackName
+        self.damage = damage
+        self.attackDescription = attackDescription
+        self.type = type
+        self.pokemonDescription = pokemonDescription
+    }
 }
 
 // BattlePokemon stores changing values like current HP during the game.
-struct BattlePokemon {
+struct BattlePokemon: Identifiable, Equatable {
+    let id: UUID
     let pokemon: Pokemon
     var currentHP: Int
 
-    init(pokemon: Pokemon) {
+    init(id: UUID = UUID(), pokemon: Pokemon) {
+        self.id = id
         self.pokemon = pokemon
         self.currentHP = pokemon.maxHP
     }

@@ -1,60 +1,52 @@
 import SwiftUI
 
 struct BattleControlsView: View {
+    let phaseLabel: String
     let message: String
-    let attackButtonTitle: String
-    let isAttackEnabled: Bool
-    let isGameOver: Bool
     let resultTitle: String?
     let resultMessage: String?
-    let onAttack: () -> Void
-    let onRestart: () -> Void
 
     var body: some View {
-        VStack(spacing: 16) {
-            // Battle log lets the player follow each move.
-            Text(message)
-                .font(.headline)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.white.opacity(0.82))
-                .clipShape(RoundedRectangle(cornerRadius: 18))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(phaseLabel)
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.white.opacity(0.78))
+                    .clipShape(Capsule())
 
-            // Main attack button for the player's turn.
-            Button(action: onAttack) {
-                Text(attackButtonTitle)
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(isAttackEnabled ? Color.red : Color.gray)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
-            }
-            .disabled(!isAttackEnabled)
+                Spacer()
 
-            if isGameOver {
-                VStack(spacing: 10) {
-                    Text(resultTitle ?? "Battle Over")
-                        .font(.title2)
+                if let resultTitle {
+                    Text(resultTitle)
+                        .font(.caption)
                         .fontWeight(.bold)
-
-                    Text(resultMessage ?? "")
-                        .multilineTextAlignment(.center)
-
-                    Button("Restart Game", action: onRestart)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(Color.blue)
-                        .clipShape(Capsule())
+                        .foregroundStyle(Color.red)
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.white.opacity(0.88))
-                .clipShape(RoundedRectangle(cornerRadius: 22))
+            }
+
+            Text(message)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let resultMessage, resultMessage != message {
+                Text(resultMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color.white.opacity(0.82))
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(Color.black.opacity(0.08), lineWidth: 1)
+        )
     }
 }

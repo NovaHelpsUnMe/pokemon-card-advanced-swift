@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = GameViewModel()
+    @State private var isHandSheetPresented = false
+    @State private var inspectedCard: BattlePokemon?
 
     var body: some View {
         ZStack {
@@ -15,37 +17,108 @@ struct ContentView: View {
             )
             .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 20) {
-                    VStack(spacing: 8) {
-                        Text("Pokemon Card Advanced")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
+            GeometryReader { proxy in
+                let contentHeight = proxy.size.height
 
-                        Text(viewModel.turnLabel)
-                            .font(.headline)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.75))
-                            .clipShape(Capsule())
-                    }
+                VStack(spacing: 10) {
+                    Text("Pokemon Card Advanced")
+                        .font(.title2)
+                        .fontWeight(.bold)
 
-                    PokemonCardView(title: "Opponent", battlePokemon: viewModel.opponent)
-                    PokemonCardView(title: "Player", battlePokemon: viewModel.player)
+                    BattleHeaderView(
+                        title: viewModel.opponentBoard.title,
+                        deckCount: viewModel.opponentBoard.deckCount,
+                        discardCount: viewModel.opponentBoard.discardCount,
+                        prizeCount: viewModel.opponentBoard.prizesRemaining
+                    )
+
+                    PokemonCardView(
+                        title: "Opponent Active",
+                        battlePokemon: viewModel.opponentBoard.active,
+                        emphasis: .compact
+                    )
+
+                    BenchRowView(
+                        title: "Opponent Bench",
+                        cards: viewModel.opponentBoard.bench,
+                        maxSlots: viewModel.opponentBoard.maxBenchSize
+                    )
 
                     BattleControlsView(
+                        phaseLabel: viewModel.phaseLabel,
                         message: viewModel.battleMessage,
-                        attackButtonTitle: viewModel.attackButtonTitle,
-                        isAttackEnabled: viewModel.isPlayerTurn,
-                        isGameOver: viewModel.isGameOver,
                         resultTitle: viewModel.resultTitle,
-                        resultMessage: viewModel.resultMessage,
-                        onAttack: viewModel.playerAttack,
-                        onRestart: viewModel.restartGame
+                        resultMessage: viewModel.resultMessage
+                    )
+
+                    PokemonCardView(
+                        title: "Player Active",
+                        battlePokemon: viewModel.playerBoard.active,
+                        emphasis: .regular
+                    )
+
+                    BenchRowView(
+                        title: "Your Bench",
+                        cards: viewModel.playerBoard.bench,
+                        maxSlots: viewModel.playerBoard.maxBenchSize
+                    )
+
+                    BattleHeaderView(
+                        title: viewModel.playerBoard.title,
+                        deckCount: viewModel.playerBoard.deckCount,
+                        discardCount: viewModel.playerBoard.discardCount,
+                        prizeCount: viewModel.playerBoard.prizesRemaining
                     )
                 }
-                .padding()
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .frame(width: proxy.size.width, height: contentHeight, alignment: .top)
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            BattleActionBarView(
+                handTitle: viewModel.handButtonTitle,
+                attackTitle: viewModel.attackButtonTitle,
+                canAttack: viewModel.isAttackEnabled,
+                canStartBattle: viewModel.canStartBattle,
+                canRestart: viewModel.canRestartFromBar,
+                onHand: { isHandSheetPresented = true },
+                onAttack: viewModel.playerAttack,
+                onStartBattle: viewModel.startBattle,
+                onRestart: viewModel.restartGame
+            )
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .background(Color.clear)
+        }
+        .sheet(isPresented: $isHandSheetPresented) {
+            HandSheetView(
+                title: viewModel.handSheetTitle,
+                subtitle: viewModel.handSheetSubtitle,
+                cards: viewModel.playerBoard.hand,
+                canMakeActive: viewModel.canAssignPlayerActive,
+                canBench: viewModel.canBenchPlayerCard,
+                actionSummary: viewModel.cardActionSummary,
+                onMakeActive: { card in
+                    viewModel.placePlayerActive(cardID: card.id)
+                    if viewModel.playerBoard.hand.isEmpty || viewModel.playerBoard.active != nil {
+                        isHandSheetPresented = false
+                    }
+                },
+                onBench: { card in
+                    viewModel.placePlayerBench(cardID: card.id)
+                },
+                onInspect: { card in
+                    inspectedCard = card
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $inspectedCard) { card in
+            CardDetailSheetView(battlePokemon: card)
+                .presentationDetents([.medium])
         }
     }
 }
