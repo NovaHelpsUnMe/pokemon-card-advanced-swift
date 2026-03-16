@@ -108,7 +108,7 @@ private struct EnergyAttachmentPanel: View {
                 Text(hasAttachedThisTurn ? "Attachment used" : "1 attachment available")
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundStyle(hasAttachedThisTurn ? .secondary : .blue)
+                    .foregroundStyle(hasAttachedThisTurn ? Color.secondary : Color.blue)
             }
 
             if targets.isEmpty {
