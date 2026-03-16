@@ -2,12 +2,16 @@ import SwiftUI
 
 struct BattleActionBarView: View {
     let handButtonTitle: String
-    let attackButtonTitle: String
-    let isAttackEnabled: Bool
+    let primaryActionButtonTitle: String
+    let isPrimaryActionEnabled: Bool
+    let retreatButtonTitle: String
+    let isRetreatEnabled: Bool
+    let showsRetreatButton: Bool
     let canStartBattle: Bool
     let isGameOver: Bool
     let onHandTapped: () -> Void
-    let onAttackTapped: () -> Void
+    let onRetreatTapped: () -> Void
+    let onPrimaryActionTapped: () -> Void
     let onStartBattleTapped: () -> Void
     let onRestartTapped: () -> Void
 
@@ -21,12 +25,24 @@ struct BattleActionBarView: View {
                     action: onHandTapped
                 )
 
+                if showsRetreatButton {
+                    actionButton(
+                        title: retreatButtonTitle,
+                        background: isRetreatEnabled ? Color.blue : Color.gray,
+                        foreground: .white,
+                        isEnabled: isRetreatEnabled,
+                        action: onRetreatTapped
+                    )
+                }
+            }
+
+            if !canStartBattle && !isGameOver {
                 actionButton(
-                    title: attackButtonTitle,
-                    background: isAttackEnabled ? Color.red : Color.gray,
+                    title: primaryActionButtonTitle,
+                    background: isPrimaryActionEnabled ? Color.red : Color.gray,
                     foreground: .white,
-                    isEnabled: isAttackEnabled,
-                    action: onAttackTapped
+                    isEnabled: isPrimaryActionEnabled,
+                    action: onPrimaryActionTapped
                 )
             }
 

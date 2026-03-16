@@ -1,13 +1,13 @@
 import Foundation
 
-// Starter Pokemon roster for the advanced battle project.
-// Nova stays in the game, but the stats are balanced for a simple classroom battle.
 let samplePokemon: [Pokemon] = [
     Pokemon(
         imageName: "Pikachu",
         name: "Pikachu",
         maxHP: 120,
         attackName: "Thunder Shock",
+        attackEnergyCost: 1,
+        retreatCost: 1,
         damage: 24,
         attackDescription: "A quick electric blast that keeps the battle moving.",
         type: "Electric",
@@ -18,6 +18,8 @@ let samplePokemon: [Pokemon] = [
         name: "Abra",
         maxHP: 90,
         attackName: "Teleport Tap",
+        attackEnergyCost: 1,
+        retreatCost: 0,
         damage: 18,
         attackDescription: "Abra blinks in and surprises the other side.",
         type: "Psychic",
@@ -28,6 +30,8 @@ let samplePokemon: [Pokemon] = [
         name: "Bulbasaur",
         maxHP: 130,
         attackName: "Vine Whip",
+        attackEnergyCost: 1,
+        retreatCost: 2,
         damage: 22,
         attackDescription: "Bulbasaur lashes out with a strong vine attack.",
         type: "Grass/Poison",
@@ -38,6 +42,8 @@ let samplePokemon: [Pokemon] = [
         name: "Charmander",
         maxHP: 110,
         attackName: "Ember",
+        attackEnergyCost: 1,
+        retreatCost: 1,
         damage: 26,
         attackDescription: "A burst of flame that hits hard.",
         type: "Fire",
@@ -46,18 +52,24 @@ let samplePokemon: [Pokemon] = [
     Pokemon(
         imageName: "Raichu",
         name: "Raichu",
-        maxHP: 145,
+        maxHP: 155,
         attackName: "Thunderbolt",
-        damage: 28,
-        attackDescription: "A heavy electric attack that can finish battles quickly.",
+        attackEnergyCost: 2,
+        retreatCost: 2,
+        damage: 34,
+        attackDescription: "A heavy electric attack that rewards evolving Pikachu.",
         type: "Electric",
-        pokemonDescription: "A stronger electric Pokemon with solid overall stats."
+        pokemonDescription: "A stronger electric Pokemon that takes over once Pikachu is ready to evolve.",
+        stage: .stage1,
+        evolvesFrom: "Pikachu"
     ),
     Pokemon(
         imageName: "Pidgey",
         name: "Pidgey",
         maxHP: 100,
         attackName: "Gust",
+        attackEnergyCost: 1,
+        retreatCost: 1,
         damage: 20,
         attackDescription: "A quick flap attack that keeps pressure on the other side.",
         type: "Normal/Flying",
@@ -68,6 +80,8 @@ let samplePokemon: [Pokemon] = [
         name: "Nova",
         maxHP: 170,
         attackName: "Box BottyMan",
+        attackEnergyCost: 2,
+        retreatCost: 2,
         damage: 30,
         attackDescription: "Nova charges in with a wild power strike.",
         type: "Custom",
@@ -75,27 +89,55 @@ let samplePokemon: [Pokemon] = [
     )
 ]
 
-let playerStarter = samplePokemon.first { $0.name == "Pikachu" }!
-let opponentStarter = samplePokemon.first { $0.name == "Nova" }!
+let sampleTrainerCards: [TrainerCard] = [
+    TrainerCard(
+        name: "Professor's Notes",
+        systemImageName: "book.closed.fill",
+        effect: .draw(cards: 2),
+        effectDescription: "Draw 2 cards.",
+        trainerDescription: "A lightweight draw card that helps the demo hand stay active without adding complex rules."
+    ),
+    TrainerCard(
+        name: "Potion",
+        systemImageName: "cross.case.fill",
+        effect: .heal(amount: 30),
+        effectDescription: "Heal 30 damage from your Active Pokemon.",
+        trainerDescription: "A simple recovery effect that gives the player one clean defensive option."
+    ),
+    TrainerCard(
+        name: "Energy Drink",
+        systemImageName: "bolt.fill",
+        effect: .attachEnergy(amount: 1),
+        effectDescription: "Attach 1 extra energy to your Active Pokemon.",
+        trainerDescription: "Adds one more attached energy so evolution state changes are visible in the demo."
+    )
+]
 
 func pokemon(named name: String) -> Pokemon {
     samplePokemon.first { $0.name == name }!
 }
 
-let samplePlayerDeck: [Pokemon] = [
-    pokemon(named: "Pikachu"),
-    pokemon(named: "Bulbasaur"),
-    pokemon(named: "Charmander"),
-    pokemon(named: "Abra"),
-    pokemon(named: "Pidgey"),
-    pokemon(named: "Raichu")
+func trainer(named name: String) -> TrainerCard {
+    sampleTrainerCards.first { $0.name == name }!
+}
+
+let samplePlayerDeck: [CardDefinition] = [
+    .pokemon(pokemon(named: "Pikachu")),
+    .pokemon(pokemon(named: "Bulbasaur")),
+    .trainer(trainer(named: "Professor's Notes")),
+    .pokemon(pokemon(named: "Raichu")),
+    .trainer(trainer(named: "Potion")),
+    .pokemon(pokemon(named: "Charmander")),
+    .trainer(trainer(named: "Energy Drink")),
+    .pokemon(pokemon(named: "Abra")),
+    .pokemon(pokemon(named: "Pidgey"))
 ]
 
-let sampleOpponentDeck: [Pokemon] = [
-    pokemon(named: "Nova"),
-    pokemon(named: "Raichu"),
-    pokemon(named: "Pidgey"),
-    pokemon(named: "Charmander"),
-    pokemon(named: "Bulbasaur"),
-    pokemon(named: "Abra")
+let sampleOpponentDeck: [CardDefinition] = [
+    .pokemon(pokemon(named: "Nova")),
+    .pokemon(pokemon(named: "Charmander")),
+    .pokemon(pokemon(named: "Bulbasaur")),
+    .pokemon(pokemon(named: "Abra")),
+    .pokemon(pokemon(named: "Pidgey")),
+    .pokemon(pokemon(named: "Pikachu"))
 ]

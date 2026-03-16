@@ -3,7 +3,8 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = GameViewModel()
     @State private var isHandSheetPresented = false
-    @State private var selectedCard: BattlePokemon?
+    @State private var selectedCard: CardDetailItem?
+    @State private var isSelectingRetreatTarget = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -11,6 +12,7 @@ struct ContentView: View {
             let compactHeight = geometry.size.height < 780
             let boardSpacing: CGFloat = compactHeight ? 8 : 10
             let horizontalPadding: CGFloat = geometry.size.width <= 375 ? 10 : 12
+            let scrollContentBottomInset: CGFloat = 128 + geometry.safeAreaInsets.bottom
 
             ZStack {
                 LinearGradient(
@@ -23,27 +25,36 @@ struct ContentView: View {
                 )
                 .ignoresSafeArea()
 
-                VStack(spacing: boardSpacing) {
-                    boardTitle
-                    opponentSection
-                    battleStatusPanel
-                    playerSection
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: boardSpacing) {
+                        boardTitle
+                        opponentSection
+                        battleStatusPanel
+                        playerSection
+                        Color.clear
+                            .frame(height: scrollContentBottomInset)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.top, topInset)
+                    .padding(.bottom, compactHeight ? 10 : 14)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.horizontal, horizontalPadding)
-                .padding(.top, topInset)
-                .padding(.bottom, compactHeight ? 10 : 14)
             }
         }
         .safeAreaInset(edge: .bottom) {
             BattleActionBarView(
                 handButtonTitle: viewModel.playerHandButtonTitle,
-                attackButtonTitle: viewModel.attackButtonTitle,
-                isAttackEnabled: viewModel.isAttackButtonEnabled,
+                primaryActionButtonTitle: viewModel.primaryActionButtonTitle,
+                isPrimaryActionEnabled: viewModel.isPrimaryActionEnabled,
+                retreatButtonTitle: isSelectingRetreatTarget ? "Cancel Retreat" : "Retreat",
+                isRetreatEnabled: isSelectingRetreatTarget || viewModel.canRetreat,
+                showsRetreatButton: viewModel.shouldShowRetreatButton,
                 canStartBattle: viewModel.canStartBattle,
                 isGameOver: viewModel.isGameOver,
                 onHandTapped: { isHandSheetPresented = true },
-                onAttackTapped: viewModel.playerAttack,
+                onRetreatTapped: toggleRetreatSelection,
+                onPrimaryActionTapped: viewModel.performPrimaryAction,
                 onStartBattleTapped: viewModel.startBattle,
                 onRestartTapped: viewModel.restartGame
             )
@@ -61,14 +72,33 @@ struct ContentView: View {
                 },
                 onMoveToBench: { card in
                     viewModel.placePlayerBench(cardID: card.id)
+                },
+                onAttachEnergy: { card in
+                    viewModel.attachPlayerEnergy(to: card.id)
+                },
+                onEvolve: { card, target in
+                    viewModel.evolvePlayerPokemon(cardID: card.id, targetID: target.id)
+                },
+                onPlayTrainer: { card in
+                    viewModel.playTrainer(cardID: card.id)
                 }
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedCard) { card in
-            CardDetailSheetView(battlePokemon: card) {
+            CardDetailSheetView(item: card) {
                 selectedCard = nil
+            }
+        }
+        .onChange(of: viewModel.canRetreat) { canRetreat in
+            if !canRetreat {
+                isSelectingRetreatTarget = false
+            }
+        }
+        .onChange(of: viewModel.shouldShowRetreatButton) { isVisible in
+            if !isVisible {
+                isSelectingRetreatTarget = false
             }
         }
     }
@@ -88,6 +118,7 @@ struct ContentView: View {
                 label: viewModel.opponentBoard.title,
                 deckCount: viewModel.opponentVisibleDeckCount,
                 discardCount: viewModel.opponentVisibleDiscardCount,
+                energyCount: viewModel.opponentBoard.energyHandCount,
                 prizeCount: viewModel.opponentPrizesRemaining
             )
 
@@ -115,6 +146,7 @@ struct ContentView: View {
                 label: viewModel.playerBoard.title,
                 deckCount: viewModel.playerVisibleDeckCount,
                 discardCount: viewModel.playerVisibleDiscardCount,
+                energyCount: viewModel.playerBoard.energyHandCount,
                 prizeCount: viewModel.playerPrizesRemaining
             )
         }
@@ -144,6 +176,13 @@ struct ContentView: View {
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            if isSelectingRetreatTarget {
+                Text("Choose a Benched Pokemon to become your new Active Pokemon.")
+                    .font(.caption)
+                    .foregroundStyle(.blue)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             if let resultMessage = viewModel.resultMessage {
                 Text(resultMessage)
                     .font(.caption)
@@ -171,16 +210,11 @@ struct ContentView: View {
     }
 
     private var battlePhaseText: String {
-        switch viewModel.gamePhase {
-        case .setup:
-            return "Setup Phase"
-        case .battle:
-            return viewModel.isGameOver ? "Game Over" : "Battle Phase"
-        }
+        viewModel.phaseLabel
     }
 
     private var battleTurnText: String? {
-        guard viewModel.gamePhase == .battle, !viewModel.isGameOver else {
+        guard viewModel.shouldShowTurnLabel else {
             return nil
         }
 
@@ -202,7 +236,7 @@ struct ContentView: View {
         Group {
             if let card {
                 Button {
-                    selectedCard = card
+                    selectedCard = .boardPokemon(card)
                 } label: {
                     PokemonCardView(title: title, battlePokemon: card, displayStyle: .board)
                 }
@@ -217,18 +251,46 @@ struct ContentView: View {
         BenchRowView(
             cards: cards,
             maxSlots: maxSlots,
+            selectableCardIDs: isSelectingRetreatTarget ? Set(viewModel.availablePlayerRetreatTargets.map(\.id)) : [],
             onSelectCard: { card in
-                selectedCard = card
+                handleBenchSelection(card)
             }
         )
     }
 
-    private func inspectHandCard(_ card: BattlePokemon) {
+    private func inspectHandCard(_ card: BattleCard) {
         isHandSheetPresented = false
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            selectedCard = card
+            selectedCard = .handCard(card)
         }
+    }
+
+    private func toggleRetreatSelection() {
+        guard viewModel.shouldShowRetreatButton else {
+            return
+        }
+
+        if isSelectingRetreatTarget {
+            isSelectingRetreatTarget = false
+            return
+        }
+
+        guard viewModel.canRetreat else {
+            return
+        }
+
+        isSelectingRetreatTarget = true
+    }
+
+    private func handleBenchSelection(_ card: BattlePokemon) {
+        if isSelectingRetreatTarget && viewModel.availablePlayerRetreatTargets.contains(card) {
+            viewModel.performPlayerRetreat(to: card.id)
+            isSelectingRetreatTarget = false
+            return
+        }
+
+        selectedCard = .boardPokemon(card)
     }
 }
 

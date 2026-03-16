@@ -4,6 +4,7 @@ struct BattleHeaderView: View {
     let label: String
     let deckCount: Int
     let discardCount: Int
+    let energyCount: Int
     let prizeCount: Int
 
     var body: some View {
@@ -16,6 +17,7 @@ struct BattleHeaderView: View {
 
             BattleHeaderBadge(label: "Deck", value: deckCount)
             BattleHeaderBadge(label: "Discard", value: discardCount)
+            BattleHeaderBadge(label: "Energy", value: energyCount)
             BattleHeaderBadge(label: "Prizes", value: prizeCount)
         }
         .padding(.horizontal, 14)
