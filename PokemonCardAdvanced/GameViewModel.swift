@@ -85,8 +85,8 @@ final class GameViewModel: ObservableObject {
     init(playerDeck: [Pokemon] = samplePlayerDeck, opponentDeck: [Pokemon] = sampleOpponentDeck) {
         playerDeckSeed = playerDeck
         opponentDeckSeed = opponentDeck
-        playerBoard = PlayerBoard(title: "Player", deck: playerDeck.map(BattlePokemon.init))
-        opponentBoard = PlayerBoard(title: "Opponent", deck: opponentDeck.map(BattlePokemon.init))
+        playerBoard = PlayerBoard(title: "Player", deck: playerDeck.map { BattlePokemon(pokemon: $0) })
+        opponentBoard = PlayerBoard(title: "Opponent", deck: opponentDeck.map { BattlePokemon(pokemon: $0) })
         battleMessage = "Choose an active Pokemon from your opening hand."
         restartGame()
     }
@@ -184,8 +184,8 @@ final class GameViewModel: ObservableObject {
     }
 
     func restartGame() {
-        playerBoard = PlayerBoard(title: "Player", deck: playerDeckSeed.map(BattlePokemon.init))
-        opponentBoard = PlayerBoard(title: "Opponent", deck: opponentDeckSeed.map(BattlePokemon.init))
+        playerBoard = PlayerBoard(title: "Player", deck: playerDeckSeed.map { BattlePokemon(pokemon: $0) })
+        opponentBoard = PlayerBoard(title: "Opponent", deck: opponentDeckSeed.map { BattlePokemon(pokemon: $0) })
         gamePhase = .setup
         currentTurn = .player
         playerBoard.drawCards(5)
