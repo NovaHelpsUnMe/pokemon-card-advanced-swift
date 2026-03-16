@@ -35,7 +35,7 @@ struct PokemonCardView: View {
     }
 
     private var imageSize: CGFloat {
-        displayStyle == .board ? 76 : 120
+        displayStyle == .board ? 72 : 120
     }
 
     private var nameFont: Font {
@@ -43,7 +43,7 @@ struct PokemonCardView: View {
     }
 
     private var attackTitleFont: Font {
-        displayStyle == .board ? .subheadline : .headline
+        displayStyle == .board ? .caption : .headline
     }
 
     private var attackFont: Font {
@@ -58,8 +58,16 @@ struct PokemonCardView: View {
         displayStyle == .standard
     }
 
+    private var cardSpacing: CGFloat {
+        displayStyle == .board ? 8 : 12
+    }
+
+    private var cardPadding: CGFloat {
+        displayStyle == .board ? 12 : 16
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: displayStyle == .board ? 10 : 12) {
+        VStack(alignment: .leading, spacing: cardSpacing) {
             HStack {
                 Text(title)
                     .font(.caption)
@@ -73,7 +81,7 @@ struct PokemonCardView: View {
 
                 if let battlePokemon {
                     Text("HP \(battlePokemon.currentHP)/\(battlePokemon.maxHP)")
-                        .font(.subheadline)
+                        .font(displayStyle == .board ? .caption : .subheadline)
                         .fontWeight(.bold)
                 }
             }
@@ -87,18 +95,19 @@ struct PokemonCardView: View {
                 ProgressView(value: Double(battlePokemon.currentHP), total: Double(battlePokemon.maxHP))
                     .tint(.red)
 
-                HStack(spacing: displayStyle == .board ? 12 : 16) {
+                HStack(alignment: .top, spacing: displayStyle == .board ? 10 : 16) {
                     Image(battlePokemon.imageName)
                         .resizable()
                         .scaledToFit()
                         .frame(width: imageSize, height: imageSize)
-                        .padding(8)
+                        .padding(displayStyle == .board ? 6 : 8)
                         .background(Color.white.opacity(0.65))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .clipShape(RoundedRectangle(cornerRadius: displayStyle == .board ? 14 : 16))
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: displayStyle == .board ? 5 : 8) {
                         Text("Attack")
                             .font(attackTitleFont)
+                            .foregroundStyle(.secondary)
 
                         Text(battlePokemon.attackName)
                             .font(attackFont)
@@ -126,17 +135,17 @@ struct PokemonCardView: View {
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Empty Slot")
-                        .font(.title3)
+                        .font(displayStyle == .board ? .headline : .title3)
                         .fontWeight(.bold)
 
                     Text("Choose a Pokemon from your hand during setup or wait for a bench promotion.")
-                        .font(.subheadline)
+                        .font(displayStyle == .board ? .caption : .subheadline)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
             }
         }
-        .padding(displayStyle == .board ? 14 : 16)
+        .padding(cardPadding)
         .background(backgroundColor.opacity(0.45))
         .clipShape(RoundedRectangle(cornerRadius: 22))
         .overlay(

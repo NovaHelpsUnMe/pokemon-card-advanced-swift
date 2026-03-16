@@ -7,6 +7,11 @@ struct ContentView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let topInset = max(geometry.safeAreaInsets.top, 10)
+            let compactHeight = geometry.size.height < 780
+            let boardSpacing: CGFloat = compactHeight ? 8 : 10
+            let horizontalPadding: CGFloat = geometry.size.width <= 375 ? 10 : 12
+
             ZStack {
                 LinearGradient(
                     colors: [
@@ -18,16 +23,16 @@ struct ContentView: View {
                 )
                 .ignoresSafeArea()
 
-                VStack(spacing: 10) {
+                VStack(spacing: boardSpacing) {
                     boardTitle
                     opponentSection
                     battleStatusPanel
                     playerSection
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.horizontal, 12)
-                .padding(.top, max(geometry.safeAreaInsets.top, 12))
-                .padding(.bottom, 8)
+                .padding(.horizontal, horizontalPadding)
+                .padding(.top, topInset)
+                .padding(.bottom, compactHeight ? 10 : 14)
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -43,8 +48,8 @@ struct ContentView: View {
                 onRestartTapped: viewModel.restartGame
             )
             .padding(.horizontal, 12)
-            .padding(.top, 8)
-            .padding(.bottom, 8)
+            .padding(.top, 6)
+            .padding(.bottom, 6)
             .background(Color.clear)
         }
         .sheet(isPresented: $isHandSheetPresented) {
@@ -74,10 +79,11 @@ struct ContentView: View {
             .fontWeight(.bold)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 4)
+            .padding(.bottom, 2)
     }
 
     private var opponentSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 7) {
             BattleHeaderView(
                 label: viewModel.opponentBoard.title,
                 deckCount: viewModel.opponentVisibleDeckCount,
@@ -92,12 +98,12 @@ struct ContentView: View {
 
             benchSection(cards: viewModel.opponentBoard.bench, maxSlots: viewModel.opponentBoard.maxBenchSize)
         }
-        .padding(12)
+        .padding(11)
         .background(boardPanelBackground)
     }
 
     private var playerSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 7) {
             activeCardSection(
                 title: "Player Active",
                 card: viewModel.playerBoard.active
@@ -112,7 +118,7 @@ struct ContentView: View {
                 prizeCount: viewModel.playerPrizesRemaining
             )
         }
-        .padding(12)
+        .padding(11)
         .background(boardPanelBackground)
     }
 
@@ -146,7 +152,7 @@ struct ContentView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(13)
         .background(Color.white.opacity(0.84))
         .clipShape(RoundedRectangle(cornerRadius: 22))
         .overlay(

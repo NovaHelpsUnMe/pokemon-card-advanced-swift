@@ -12,8 +12,8 @@ struct BattleActionBarView: View {
     let onRestartTapped: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
                 actionButton(
                     title: handButtonTitle,
                     background: Color.white.opacity(0.92),
@@ -48,11 +48,12 @@ struct BattleActionBarView: View {
                 )
             }
         }
-        .padding(14)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .clipShape(RoundedRectangle(cornerRadius: 22))
         .overlay(
-            RoundedRectangle(cornerRadius: 24)
+            RoundedRectangle(cornerRadius: 22)
                 .stroke(Color.white.opacity(0.35), lineWidth: 1)
         )
     }
@@ -66,12 +67,13 @@ struct BattleActionBarView: View {
     ) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.headline)
+                .font(.subheadline)
+                .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, 12)
                 .background(background)
                 .foregroundStyle(foreground)
-                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .disabled(!isEnabled)
     }

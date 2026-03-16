@@ -6,12 +6,14 @@ struct BenchRowView: View {
     var onSelectCard: ((BattlePokemon) -> Void)? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Bench")
-                .font(.headline)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .padding(.horizontal, 2)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     ForEach(cards) { card in
                         CompactBenchCardView(
                             battlePokemon: card,
@@ -26,6 +28,7 @@ struct BenchRowView: View {
                     }
                 }
                 .padding(.vertical, 2)
+                .padding(.horizontal, 1)
             }
         }
     }
@@ -51,9 +54,9 @@ private struct CompactBenchCardView: View {
 
     private var benchCard: some View {
         PokemonCardView(title: "Bench", battlePokemon: battlePokemon)
-            .frame(width: 136, height: 188, alignment: .top)
-            .scaleEffect(x: 0.68, y: 0.68, anchor: .topLeading)
-            .frame(width: 94, height: 128, alignment: .topLeading)
+            .frame(width: 132, height: 182, alignment: .top)
+            .scaleEffect(x: 0.64, y: 0.64, anchor: .topLeading)
+            .frame(width: 86, height: 118, alignment: .topLeading)
             .clipped()
     }
 }
@@ -69,11 +72,11 @@ private struct EmptyBenchSlotView: View {
                 .font(.caption)
                 .fontWeight(.semibold)
         }
-        .frame(width: 94, height: 128)
+        .frame(width: 86, height: 118)
         .background(Color.white.opacity(0.52))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 14)
                 .stroke(style: StrokeStyle(lineWidth: 1, dash: [6]))
                 .foregroundStyle(Color.black.opacity(0.15))
         )
