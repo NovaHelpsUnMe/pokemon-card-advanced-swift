@@ -44,12 +44,13 @@ struct ContentView: View {
         .safeAreaInset(edge: .bottom) {
             BattleActionBarView(
                 handButtonTitle: viewModel.playerHandButtonTitle,
-                attackButtonTitle: viewModel.attackButtonTitle,
-                isAttackEnabled: viewModel.isAttackButtonEnabled,
+                primaryActionButtonTitle: viewModel.primaryActionButtonTitle,
+                isPrimaryActionEnabled: viewModel.isPrimaryActionEnabled,
+                showsPrimaryActionButton: !viewModel.isGameOver,
                 canStartBattle: viewModel.canStartBattle,
                 isGameOver: viewModel.isGameOver,
                 onHandTapped: { isHandSheetPresented = true },
-                onAttackTapped: viewModel.playerAttack,
+                onPrimaryActionTapped: viewModel.performPrimaryAction,
                 onStartBattleTapped: viewModel.startBattle,
                 onRestartTapped: viewModel.restartGame
             )
@@ -177,16 +178,11 @@ struct ContentView: View {
     }
 
     private var battlePhaseText: String {
-        switch viewModel.gamePhase {
-        case .setup:
-            return "Setup Phase"
-        case .battle:
-            return viewModel.isGameOver ? "Game Over" : "Battle Phase"
-        }
+        viewModel.phaseLabel
     }
 
     private var battleTurnText: String? {
-        guard viewModel.gamePhase == .battle, !viewModel.isGameOver else {
+        guard viewModel.shouldShowTurnLabel else {
             return nil
         }
 
