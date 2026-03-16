@@ -3,6 +3,7 @@ import SwiftUI
 struct BenchRowView: View {
     let cards: [BattlePokemon]
     let maxSlots: Int
+    var selectableCardIDs: Set<UUID> = []
     var onSelectCard: ((BattlePokemon) -> Void)? = nil
 
     var body: some View {
@@ -17,6 +18,7 @@ struct BenchRowView: View {
                     ForEach(cards) { card in
                         CompactBenchCardView(
                             battlePokemon: card,
+                            isSelectable: selectableCardIDs.contains(card.id),
                             onTap: onSelectCard.map { callback in
                                 { callback(card) }
                             }
@@ -36,6 +38,7 @@ struct BenchRowView: View {
 
 private struct CompactBenchCardView: View {
     let battlePokemon: BattlePokemon
+    var isSelectable: Bool = false
     var onTap: (() -> Void)? = nil
 
     var body: some View {
@@ -59,6 +62,10 @@ private struct CompactBenchCardView: View {
             displayStyle: .benchCompact
         )
         .frame(width: 86, height: 118, alignment: .top)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(isSelectable ? Color.blue : Color.clear, lineWidth: 3)
+        )
     }
 }
 

@@ -71,6 +71,19 @@ struct PlayerBoard {
         active = card
     }
 
+    mutating func retreatActive(toBenchCardID cardID: UUID) -> BattlePokemon? {
+        guard let currentActive = active,
+              let benchIndex = bench.firstIndex(where: { $0.id == cardID }) else {
+            return nil
+        }
+
+        let promoted = bench.remove(at: benchIndex)
+        active = nil
+        bench.append(currentActive)
+        active = promoted
+        return promoted
+    }
+
     mutating func promoteFirstBenchToActive() -> BattlePokemon? {
         guard !bench.isEmpty else { return nil }
         let promoted = bench.removeFirst()
@@ -96,6 +109,7 @@ final class GameViewModel: ObservableObject {
     @Published var battleMessage: String
     @Published var resultTitle: String?
     @Published var resultMessage: String?
+    @Published var hasPlayerRetreatedThisTurn = false
 
     private let playerDeckSeed: [Pokemon]
     private let opponentDeckSeed: [Pokemon]
@@ -162,6 +176,25 @@ final class GameViewModel: ObservableObject {
 
     var canEndPlayerTurn: Bool {
         isPlayerActionPhase && isOpeningPlayerTurnAttackBlocked
+    }
+
+    var availablePlayerRetreatTargets: [BattlePokemon] {
+        guard isPlayerActionPhase,
+              !hasPlayerRetreatedThisTurn,
+              playerBoard.active != nil,
+              !playerBoard.bench.isEmpty else {
+            return []
+        }
+
+        return playerBoard.bench
+    }
+
+    var canRetreat: Bool {
+        !availablePlayerRetreatTargets.isEmpty
+    }
+
+    var shouldShowRetreatButton: Bool {
+        isPlayerActionPhase && !isGameOver
     }
 
     var isRestartButtonVisible: Bool {
@@ -298,6 +331,7 @@ final class GameViewModel: ObservableObject {
         guard canStartBattle else { return }
 
         hasCompletedOpeningPlayerTurn = false
+        hasPlayerRetreatedThisTurn = false
         beginTurn(for: .player, after: "Setup complete. \(playerBoard.active?.name ?? "Your active Pokemon") goes first.")
     }
 
@@ -331,12 +365,24 @@ final class GameViewModel: ObservableObject {
         beginTurn(for: .opponent, after: "\(attacker.name) used \(attacker.attackName) for \(attacker.damage) damage.")
     }
 
+    func performPlayerRetreat(to benchCardID: UUID) {
+        guard canRetreat,
+              let previousActive = playerBoard.active,
+              let promoted = playerBoard.retreatActive(toBenchCardID: benchCardID) else {
+            return
+        }
+
+        hasPlayerRetreatedThisTurn = true
+        battleMessage = "\(previousActive.name) retreated. \(promoted.name) moved up from your bench."
+    }
+
     func restartGame() {
         playerBoard = PlayerBoard(title: "Player", deck: playerDeckSeed.map { BattlePokemon(pokemon: $0) })
         opponentBoard = PlayerBoard(title: "Opponent", deck: opponentDeckSeed.map { BattlePokemon(pokemon: $0) })
         gamePhase = .setup
         currentTurn = .player
         hasCompletedOpeningPlayerTurn = false
+        hasPlayerRetreatedThisTurn = false
         playerBoard.drawCards(5)
         opponentBoard.drawCards(5)
         autoSetupOpponentBoard()
@@ -417,6 +463,7 @@ final class GameViewModel: ObservableObject {
     private func beginTurn(for turn: BattleTurn, after message: String) {
         currentTurn = turn
         gamePhase = .draw
+        hasPlayerRetreatedThisTurn = turn == .player ? false : hasPlayerRetreatedThisTurn
 
         let drawMessage: String?
 

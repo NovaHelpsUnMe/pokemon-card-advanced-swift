@@ -4,6 +4,7 @@ struct ContentView: View {
     @StateObject private var viewModel = GameViewModel()
     @State private var isHandSheetPresented = false
     @State private var selectedCard: BattlePokemon?
+    @State private var isSelectingRetreatTarget = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -46,10 +47,13 @@ struct ContentView: View {
                 handButtonTitle: viewModel.playerHandButtonTitle,
                 primaryActionButtonTitle: viewModel.primaryActionButtonTitle,
                 isPrimaryActionEnabled: viewModel.isPrimaryActionEnabled,
-                showsPrimaryActionButton: !viewModel.isGameOver,
+                retreatButtonTitle: isSelectingRetreatTarget ? "Cancel Retreat" : "Retreat",
+                isRetreatEnabled: isSelectingRetreatTarget || viewModel.canRetreat,
+                showsRetreatButton: viewModel.shouldShowRetreatButton,
                 canStartBattle: viewModel.canStartBattle,
                 isGameOver: viewModel.isGameOver,
                 onHandTapped: { isHandSheetPresented = true },
+                onRetreatTapped: toggleRetreatSelection,
                 onPrimaryActionTapped: viewModel.performPrimaryAction,
                 onStartBattleTapped: viewModel.startBattle,
                 onRestartTapped: viewModel.restartGame
@@ -76,6 +80,16 @@ struct ContentView: View {
         .sheet(item: $selectedCard) { card in
             CardDetailSheetView(battlePokemon: card) {
                 selectedCard = nil
+            }
+        }
+        .onChange(of: viewModel.canRetreat) { canRetreat in
+            if !canRetreat {
+                isSelectingRetreatTarget = false
+            }
+        }
+        .onChange(of: viewModel.gamePhase) { phase in
+            if phase != .battle {
+                isSelectingRetreatTarget = false
             }
         }
     }
@@ -151,6 +165,13 @@ struct ContentView: View {
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            if isSelectingRetreatTarget {
+                Text("Choose a Benched Pokemon to become your new Active Pokemon.")
+                    .font(.caption)
+                    .foregroundStyle(.blue)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             if let resultMessage = viewModel.resultMessage {
                 Text(resultMessage)
                     .font(.caption)
@@ -219,8 +240,9 @@ struct ContentView: View {
         BenchRowView(
             cards: cards,
             maxSlots: maxSlots,
+            selectableCardIDs: isSelectingRetreatTarget ? Set(viewModel.availablePlayerRetreatTargets.map(\.id)) : [],
             onSelectCard: { card in
-                selectedCard = card
+                handleBenchSelection(card)
             }
         )
     }
@@ -231,6 +253,33 @@ struct ContentView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             selectedCard = card
         }
+    }
+
+    private func toggleRetreatSelection() {
+        guard viewModel.gamePhase == .battle, !viewModel.isGameOver else {
+            return
+        }
+
+        if isSelectingRetreatTarget {
+            isSelectingRetreatTarget = false
+            return
+        }
+
+        guard viewModel.canRetreat else {
+            return
+        }
+
+        isSelectingRetreatTarget = true
+    }
+
+    private func handleBenchSelection(_ card: BattlePokemon) {
+        if isSelectingRetreatTarget && viewModel.availablePlayerRetreatTargets.contains(card) {
+            viewModel.performPlayerRetreat(to: card.id)
+            isSelectingRetreatTarget = false
+            return
+        }
+
+        selectedCard = card
     }
 }
 

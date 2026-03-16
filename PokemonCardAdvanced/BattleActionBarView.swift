@@ -4,10 +4,13 @@ struct BattleActionBarView: View {
     let handButtonTitle: String
     let primaryActionButtonTitle: String
     let isPrimaryActionEnabled: Bool
-    let showsPrimaryActionButton: Bool
+    let retreatButtonTitle: String
+    let isRetreatEnabled: Bool
+    let showsRetreatButton: Bool
     let canStartBattle: Bool
     let isGameOver: Bool
     let onHandTapped: () -> Void
+    let onRetreatTapped: () -> Void
     let onPrimaryActionTapped: () -> Void
     let onStartBattleTapped: () -> Void
     let onRestartTapped: () -> Void
@@ -21,9 +24,19 @@ struct BattleActionBarView: View {
                     foreground: .primary,
                     action: onHandTapped
                 )
+
+                if showsRetreatButton {
+                    actionButton(
+                        title: retreatButtonTitle,
+                        background: isRetreatEnabled ? Color.blue : Color.gray,
+                        foreground: .white,
+                        isEnabled: isRetreatEnabled,
+                        action: onRetreatTapped
+                    )
+                }
             }
 
-            if showsPrimaryActionButton && !canStartBattle && !isGameOver {
+            if !canStartBattle && !isGameOver {
                 actionButton(
                     title: primaryActionButtonTitle,
                     background: isPrimaryActionEnabled ? Color.red : Color.gray,
