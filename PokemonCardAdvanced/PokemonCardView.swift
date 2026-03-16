@@ -268,8 +268,8 @@ struct HandCardView: View {
                     .buttonStyle(.bordered)
             }
         }
-        .frame(width: 180, minHeight: 240, alignment: .topLeading)
-        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(minHeight: 120)        .padding()
         .background(Color.white.opacity(0.84))
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(

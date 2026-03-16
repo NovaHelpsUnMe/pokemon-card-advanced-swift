@@ -82,11 +82,13 @@ final class GameViewModel: ObservableObject {
     private let playerDeckSeed: [Pokemon]
     private let opponentDeckSeed: [Pokemon]
 
-    init(playerDeck: [Pokemon] = samplePlayerDeck, opponentDeck: [Pokemon] = sampleOpponentDeck) {
-        playerDeckSeed = playerDeck
-        opponentDeckSeed = opponentDeck
-        playerBoard = PlayerBoard(title: "Player", deck: playerDeck.map { BattlePokemon(pokemon: $0) })
-        opponentBoard = PlayerBoard(title: "Opponent", deck: opponentDeck.map { BattlePokemon(pokemon: $0) })
+    init(playerDeck: [Pokemon]? = nil, opponentDeck: [Pokemon]? = nil) {
+        let resolvedPlayerDeck = playerDeck ?? samplePlayerDeck
+        let resolvedOpponentDeck = opponentDeck ?? sampleOpponentDeck
+        playerDeckSeed = resolvedPlayerDeck
+        opponentDeckSeed = resolvedOpponentDeck
+        playerBoard = PlayerBoard(title: "Player", deck: resolvedPlayerDeck.map { BattlePokemon(pokemon: $0) })
+        opponentBoard = PlayerBoard(title: "Opponent", deck: resolvedOpponentDeck.map { BattlePokemon(pokemon: $0) })
         battleMessage = "Choose an active Pokemon from your opening hand."
         restartGame()
     }
